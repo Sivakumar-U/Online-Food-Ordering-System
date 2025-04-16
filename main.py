@@ -33,6 +33,16 @@ def create_tables():
                 PRIMARY KEY (RestaurantID)
             );
         """,
+        "restaurant_owners": """
+            CREATE TABLE IF NOT EXISTS RestaurantOwner (
+                ID INT NOT NULL AUTO_INCREMENT,
+                UserID INT NOT NULL,
+                RestaurantID INT NOT NULL,
+                PRIMARY KEY (ID),
+                FOREIGN KEY (UserID) REFERENCES User(UserID) ON DELETE CASCADE,
+                FOREIGN KEY (RestaurantID) REFERENCES Restaurant(RestaurantID) ON DELETE CASCADE
+            );
+        """,
         "menus": """
             CREATE TABLE IF NOT EXISTS Menu (
                 MenuID INT NOT NULL AUTO_INCREMENT,
@@ -148,6 +158,13 @@ def add_sample_data():
             VALUES (%s, %s, %s, %s)
         """
         cursor.executemany(restaurant_query, sample_restaurants)
+        
+        # Link restaurant owner (UserID 4) to Restaurant 1 (Pizza Palace)
+        restaurant_owner_query = """
+            INSERT INTO RestaurantOwner (UserID, RestaurantID)
+            VALUES (%s, %s)
+        """
+        cursor.execute(restaurant_owner_query, (4, 1))  # User ID 4 (Rest Owner) linked to Restaurant ID 1
         
         # Add sample menu items
         sample_menu_items = [
@@ -271,6 +288,7 @@ class FoodOrderingApp(ctk.CTk):
         super().__init__()
         self.title("Online Food Ordering System")
         self.geometry("800x600")
+        self.resizable(False,False)
         center_window(self)  # Center the main application window
         
         # Set the application theme
@@ -371,15 +389,15 @@ class LandingPage(ctk.CTkFrame):
             self,
             text="Get Started",
             command=self.open_login_window,
-            width=200,
-            height=50,
-            corner_radius=10,
+            width=250,
+            height=60,
+            corner_radius=0,
             fg_color="#FF5722",
             hover_color="#E64A19",
             bg_color="transparent",
             font=("Arial", 14, "bold")
         )
-        self.get_started_button.place(relx=0.2, rely=0.765, anchor="center")  
+        self.get_started_button.place(relx=0.2, rely=0.71, anchor="center")  
 
     def open_login_window(self):
         """Open the login window."""

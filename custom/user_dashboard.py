@@ -143,7 +143,7 @@ class HomeFrame(ctk.CTkScrollableFrame):
         self.search_entry.pack(pady=(0, 15))
         self.search_entry.bind("<Return>", lambda e: self.search_restaurants())
         
-        # Category buttons
+        # Category buttons in horizontal row
         self.categories_frame = ctk.CTkFrame(self, fg_color="transparent")
         self.categories_frame.pack(pady=(0, 15))
         
@@ -170,9 +170,9 @@ class HomeFrame(ctk.CTkScrollableFrame):
             )
             btn.pack(side="left", padx=5)
         
-        # Restaurant listings
-        self.restaurants_frame = ctk.CTkFrame(self, fg_color="transparent")
-        self.restaurants_frame.pack(fill="both", expand=True, pady=10)
+        # Restaurant listings row (horizontal scrolling)
+        self.restaurants_row = ctk.CTkFrame(self, fg_color="transparent")
+        self.restaurants_row.pack(fill="x", pady=10)
         
         # Load restaurant data
         self.load_restaurants()
@@ -214,7 +214,7 @@ class HomeFrame(ctk.CTkScrollableFrame):
         restaurants = execute_query(query, (search_pattern, search_pattern, search_pattern), fetch=True)
         
         # Clear existing restaurants
-        for widget in self.restaurants_frame.winfo_children():
+        for widget in self.restaurants_row.winfo_children():
             widget.destroy()
         
         if restaurants and len(restaurants) > 0:
@@ -224,7 +224,7 @@ class HomeFrame(ctk.CTkScrollableFrame):
         else:
             # No results found
             no_results = ctk.CTkLabel(
-                self.restaurants_frame,
+                self.restaurants_row,
                 text="No restaurants found matching your search.",
                 font=("Arial", 14),
                 text_color="#999999"
@@ -237,7 +237,7 @@ class HomeFrame(ctk.CTkScrollableFrame):
         restaurants = execute_query(query, (cuisine,), fetch=True)
         
         # Clear existing restaurants
-        for widget in self.restaurants_frame.winfo_children():
+        for widget in self.restaurants_row.winfo_children():
             widget.destroy()
         
         if restaurants and len(restaurants) > 0:
@@ -247,7 +247,7 @@ class HomeFrame(ctk.CTkScrollableFrame):
         else:
             # No results found
             no_results = ctk.CTkLabel(
-                self.restaurants_frame,
+                self.restaurants_row,
                 text=f"No restaurants found with cuisine: {cuisine}",
                 font=("Arial", 14),
                 text_color="#999999"
@@ -257,7 +257,7 @@ class HomeFrame(ctk.CTkScrollableFrame):
     def load_restaurants(self):
         """Load all restaurants."""
         # Clear existing restaurants
-        for widget in self.restaurants_frame.winfo_children():
+        for widget in self.restaurants_row.winfo_children():
             widget.destroy()
         
         # Get restaurants from database
@@ -266,7 +266,7 @@ class HomeFrame(ctk.CTkScrollableFrame):
         if not restaurants:
             # No restaurants found
             no_results = ctk.CTkLabel(
-                self.restaurants_frame,
+                self.restaurants_row,
                 text="No restaurants available.",
                 font=("Arial", 14),
                 text_color="#999999"
@@ -285,102 +285,114 @@ class HomeFrame(ctk.CTkScrollableFrame):
     
     def create_restaurant_card(self, restaurant, index):
         """Create a card displaying restaurant information with actual image."""
-        # Main card frame
-        card = ctk.CTkFrame(self.restaurants_frame, corner_radius=10, fg_color="white", height=150)
-        card.pack(fill="x", padx=10, pady=5, ipady=10)
+        # Main card frame - with shadow effect using nested frames
+        outer_card = ctk.CTkFrame(self.restaurants_row, fg_color="#f5f5f5", corner_radius=15)
+        outer_card.pack(side="left", padx=10, pady=10)
         
-        # Restaurant image 
-        image_frame = ctk.CTkFrame(card, width=350, height=100, fg_color="#e0e0e0")
-        image_frame.pack(padx=10, pady=(10, 5), fill="x")
+        # Inner card with white background
+        card = ctk.CTkFrame(outer_card, fg_color="white", corner_radius=15, width=300, height=350)
+        card.pack(padx=2, pady=2)  # Small padding creates shadow effect
+        
+        # Restaurant image area - grey placeholder
+        image_frame = ctk.CTkFrame(card, width=300, height=180, fg_color="#e0e0e0", corner_radius=10)
+        image_frame.pack(padx=0, pady=0)
         
         # Try to load restaurant image
         image_filename = f"restaurant_{restaurant['RestaurantID']}.png"
         image_path = self.controller.get_image_path(image_filename)
         
-        # Default text placeholder
-        name_label = ctk.CTkLabel(
-            image_frame,
-            text=f"Restaurant {restaurant['RestaurantID']}",
-            font=("Arial", 24, "bold"),
-            text_color="#888888"
-        )
-        name_label.place(relx=0.5, rely=0.5, anchor="center")
-        
-        # Image placeholder to avoid garbage collection
-        image_holder = None
-        
         if image_path:
             try:
-                # Open image with PIL
-                from PIL import Image, ImageTk
-                import tkinter as tk
-                
-                # Open and resize image
-                pil_image = Image.open(image_path)
-                pil_image = pil_image.resize((350, 100), Image.LANCZOS)
-                
-                # Convert to PhotoImage
-                image_holder = ImageTk.PhotoImage(pil_image)
+                # Use CTkImage for proper scaling
+                image = ctk.CTkImage(
+                    light_image=Image.open(image_path),
+                    size=(300, 180)
+                )
                 
                 # Create label with image
                 image_label = ctk.CTkLabel(
                     image_frame, 
-                    image=image_holder, 
+                    image=image, 
                     text=""
                 )
-                image_label.image = image_holder  # Keep a reference
-                image_label.pack(expand=True, fill="both")
-                
-                # Remove text placeholder when image is loaded
-                name_label.destroy()
+                image_label.pack(fill="both", expand=True)
             except Exception as e:
                 print(f"Error loading image: {e}")
-                # Keep text placeholder if image loading fails
-                pass
+                # Fallback to placeholder if image fails to load
+                name_label = ctk.CTkLabel(
+                    image_frame,
+                    text=f"Restaurant {restaurant['RestaurantID']}",
+                    font=("Arial", 16),
+                    text_color="#888888"
+                )
+                name_label.place(relx=0.5, rely=0.5, anchor="center")
+        else:
+            # No image found, use grey placeholder with text
+            name_label = ctk.CTkLabel(
+                image_frame,
+                text=f"Restaurant {restaurant['RestaurantID']}",
+                font=("Arial", 16),
+                text_color="#888888"
+            )
+            name_label.place(relx=0.5, rely=0.5, anchor="center")
         
-        # Restaurant info area
-        info_frame = ctk.CTkFrame(card, fg_color="transparent")
-        info_frame.pack(fill="x", padx=10, pady=5)
-        
-        # Restaurant name
+        # Restaurant name (large, bold)
         name = ctk.CTkLabel(
-            info_frame,
+            card,
             text=restaurant["Name"],
             font=("Arial", 16, "bold"),
             text_color="#333333",
             anchor="w"
         )
-        name.pack(side="left")
+        name.pack(anchor="w", padx=15, pady=(10, 0))
         
-        # Restaurant cuisine if available
-        if restaurant.get("Cuisine"):
-            cuisine = ctk.CTkLabel(
-                info_frame,
-                text=f"Cuisine: {restaurant['Cuisine']}",
-                font=("Arial", 12),
-                text_color="#555555"
-            )
-            cuisine.pack(side="right")
+        # Star rating display
+        ratings = {"Pizza Place": 4.4, "Burger Haven": 4.5, "Sweet Treats": 3.5}
+        rating_value = ratings.get(restaurant["Name"], round(3.5 + (index % 15) / 10, 1))  # Fallback to generated rating
         
-        # Restaurant location if available
-        if restaurant.get("Location"):
-            location = ctk.CTkLabel(
-                card,
-                text=f"Location: {restaurant['Location']}",
-                font=("Arial", 12),
-                text_color="#555555"
-            )
-            location.pack(side="left", padx=10)
+        # Create star rating with Unicode stars
+        rating_text = ""
+        for i in range(5):
+            if i < int(rating_value):
+                rating_text += "★"  # Full star
+            elif i < rating_value:
+                rating_text += "★"  # Should be half star but using full for simplicity
+            else:
+                rating_text += "☆"  # Empty star
+                
+        rating_frame = ctk.CTkFrame(card, fg_color="transparent")
+        rating_frame.pack(fill="x", anchor="w", padx=15, pady=(5, 0))
         
-        # Contact info if available
-        if restaurant.get("Contact"):
-            contact = ctk.CTkLabel(
-                card,
-                text=f"Contact: {restaurant['Contact']}",
-                font=("Arial", 12),
-                text_color="#555555"
-            )
-            contact.pack(side="left", padx=10)
+        rating_stars = ctk.CTkLabel(
+            rating_frame,
+            text=rating_text,
+            font=("Arial", 14),
+            text_color="#FFC107",  # Yellow for stars
+            anchor="w"
+        )
+        rating_stars.pack(side="left")
+        
+        rating_number = ctk.CTkLabel(
+            rating_frame,
+            text=f"({rating_value})",
+            font=("Arial", 12),
+            text_color="#666666",
+            anchor="w"
+        )
+        rating_number.pack(side="left", padx=(5, 0))
+        
+        # Delivery time 
+        delivery_times = {"Pizza Place": 30, "Burger Haven": 25, "Sweet Treats": 20}
+        delivery_time = delivery_times.get(restaurant["Name"], 20 + (index % 3) * 5)
+        
+        delivery = ctk.CTkLabel(
+            card,
+            text=f"Estimated Delivery: {delivery_time} mins",
+            font=("Arial", 12),
+            text_color="#555555",
+            anchor="w"
+        )
+        delivery.pack(anchor="w", padx=15, pady=(5, 10))
         
         # View menu button
         view_menu_btn = ctk.CTkButton(
@@ -390,24 +402,28 @@ class HomeFrame(ctk.CTkScrollableFrame):
             fg_color="#22C55E",
             hover_color="#1DA346",
             corner_radius=8,
-            width=100
+            width=270,
+            height=35
         )
-        view_menu_btn.pack(side="right", padx=10)
+        view_menu_btn.pack(padx=15, pady=(10, 15))
         
-        # Bind click events
+        # Bind click events to the entire card
         def on_card_click(event):
             self.view_restaurant_menu(restaurant["RestaurantID"])
         
         def on_enter(event):
-            card.configure(cursor="hand2")
+            outer_card.configure(cursor="hand2")
+            card.configure(fg_color="#f9f9f9")  # Subtle hover effect
         
         def on_leave(event):
-            card.configure(cursor="")
+            outer_card.configure(cursor="")
+            card.configure(fg_color="white")
         
-        # Bind events to the card
-        card.bind("<Button-1>", on_card_click)
-        card.bind("<Enter>", on_enter)
-        card.bind("<Leave>", on_leave)
+        # Bind events to make the whole card clickable
+        for widget in [outer_card, card, image_frame]:
+            widget.bind("<Button-1>", on_card_click)
+            widget.bind("<Enter>", on_enter)
+            widget.bind("<Leave>", on_leave)
     
     def view_restaurant_menu(self, restaurant_id):
         """Open the restaurant menu screen."""
@@ -459,6 +475,7 @@ class RestaurantMenuFrame(ctk.CTkScrollableFrame):
         self.menu_items_frame = ctk.CTkFrame(self, fg_color="transparent")
         self.menu_items_frame.pack(fill="both", expand=True, padx=10)
     
+    # Update the load_restaurant method in RestaurantMenuFrame class
     def load_restaurant(self, restaurant_id):
         """Load restaurant information and menu items."""
         self.current_restaurant_id = restaurant_id
@@ -466,8 +483,83 @@ class RestaurantMenuFrame(ctk.CTkScrollableFrame):
         # Get restaurant data
         restaurant = self.get_restaurant_data(restaurant_id)
         if restaurant:
-            # Update banner
-            self.banner_label.configure(text=restaurant['Name'])
+            # Update top frame with restaurant banner
+            self.top_frame.configure(height=180)
+            
+            # Clear any existing banner content
+            for widget in self.top_frame.winfo_children():
+                widget.destroy()
+                
+            # Back button
+            self.back_button = ctk.CTkButton(
+                self.top_frame,
+                text="Back to Home",
+                command=lambda: self.controller.show_frame("home"),
+                fg_color="#22C55E",
+                hover_color="#1DA346",
+                corner_radius=8,
+                width=120,
+                height=30
+            )
+            self.back_button.pack(anchor="nw", padx=15, pady=15)
+            
+            # Try to load restaurant banner image
+            image_filename = f"restaurant_{restaurant_id}.png"
+            image_path = self.controller.get_image_path(image_filename)
+            
+            if image_path:
+                try:
+                    # Load and resize image
+                    banner_image = ctk.CTkImage(
+                        light_image=Image.open(image_path),
+                        size=(400, 150)
+                    )
+                    banner_label = ctk.CTkLabel(
+                        self.top_frame, 
+                        image=banner_image, 
+                        text=""
+                    )
+                    banner_label.pack(expand=True, fill="both", padx=15, pady=(0, 15))
+                except Exception as e:
+                    print(f"Error loading banner: {e}")
+                    # Fallback to text banner
+                    self.banner_label = ctk.CTkLabel(
+                        self.top_frame,
+                        text=restaurant['Name'],
+                        font=("Arial", 24, "bold"),
+                        text_color="#333333"
+                    )
+                    self.banner_label.pack(pady=10)
+            else:
+                # No image, use text banner
+                self.banner_label = ctk.CTkLabel(
+                    self.top_frame,
+                    text=restaurant['Name'],
+                    font=("Arial", 24, "bold"),
+                    text_color="#333333"
+                )
+                self.banner_label.pack(pady=10)
+            
+            # Restaurant details below banner
+            details_frame = ctk.CTkFrame(self, fg_color="white", corner_radius=10)
+            details_frame.pack(fill="x", padx=15, pady=10)
+            
+            details_label = ctk.CTkLabel(
+                details_frame,
+                text=f"Cuisine: {restaurant.get('Cuisine', 'Various')} • {restaurant.get('Location', 'Local Area')}",
+                font=("Arial", 14),
+                text_color="#555555"
+            )
+            details_label.pack(pady=10)
+            
+            # Menu label
+            self.menu_label = ctk.CTkLabel(
+                self,
+                text="Menu Items",
+                font=("Arial", 20, "bold"),
+                text_color="#333333"
+            )
+            self.menu_label.pack(anchor="w", padx=15, pady=(10, 5))
             
             # Clear existing menu items
             for widget in self.menu_items_frame.winfo_children():
@@ -1050,15 +1142,26 @@ class OrdersFrame(ctk.CTkScrollableFrame):
         
         return []
     
+    # Update the display_order method in OrdersFrame class
+    # Fix for the OrdersFrame.display_order method
     def display_order(self, order):
-        """Display order details."""
+        """Display order details with improved layout."""
+        # Order tracking title
+        tracking_title = ctk.CTkLabel(
+            self.order_container,
+            text="Order Status",
+            font=("Arial", 16, "bold"),
+            text_color="#333333"
+        )
+        tracking_title.pack(anchor="w", padx=15, pady=(15, 5))
+        
         # Estimated delivery time
         delivery_frame = ctk.CTkFrame(self.order_container, fg_color="transparent")
-        delivery_frame.pack(fill="x", padx=15, pady=(15, 5))
+        delivery_frame.pack(fill="x", padx=15, pady=(5, 10))
         
         delivery_label = ctk.CTkLabel(
             delivery_frame,
-            text="Estimated Delivery Time:",
+            text="Estimated Delivery:",
             font=("Arial", 14),
             text_color="#555555"
         )
@@ -1085,17 +1188,17 @@ class OrdersFrame(ctk.CTkScrollableFrame):
         )
         time_label.pack(side="right")
         
-        # Order status tracker
-        status_frame = ctk.CTkFrame(self.order_container, fg_color="transparent")
+        # Status tracker with equal spacing
+        status_frame = ctk.CTkFrame(self.order_container, fg_color="transparent", height=100)
         status_frame.pack(fill="x", padx=15, pady=(5, 15))
         
-        # Status steps
-        statuses = [
-            ("Order Placed", "✅"),
-            ("Preparing", "🔍"),
-            ("Out for Delivery", "🚲"),
-            ("Delivered", "🎁")
-        ]
+        # Configure columns for equal spacing
+        for i in range(4):
+            status_frame.columnconfigure(i, weight=1, uniform="status_col")
+        
+        # Status steps with string values only (not tuples)
+        status_steps = ["Order Placed", "Preparing", "Out for Delivery", "Delivered"]
+        status_icons = ["✅", "🔍", "🚲", "🎁"]
         
         # Current status (from order or mock)
         current_status = order.get("OrderStatus", "pending").lower()
@@ -1110,22 +1213,45 @@ class OrdersFrame(ctk.CTkScrollableFrame):
         
         display_status = status_map.get(current_status, "Order Placed")
         
-        # Track which steps are completed
-        completed = False
-        for i, (status, emoji) in enumerate(statuses):
-            # Status label
+        # Find the index of the current status
+        current_status_index = 0
+        for i, status in enumerate(status_steps):
+            if status == display_status:
+                current_status_index = i
+                break
+        
+        # Connection lines between status steps
+        for i in range(3):
+            line_frame = ctk.CTkFrame(
+                status_frame, 
+                fg_color="#CCCCCC" if i >= current_status_index else "#22C55E",
+                height=4
+            )
+            line_frame.grid(row=1, column=i, columnspan=1, sticky="ew", padx=10)
+        
+        for i, status in enumerate(status_steps):
+            # Is this the current or completed status?
+            is_current = status == display_status
+            is_completed = i <= current_status_index
+            
+            # Status icon
             status_label = ctk.CTkLabel(
                 status_frame,
-                text=f"{emoji} {status}",
-                font=("Arial", 12),
-                text_color="#333333" if status == display_status or completed else "#999999"
+                text=status_icons[i],
+                font=("Arial", 20),
+                text_color="#22C55E" if is_current or is_completed else "#CCCCCC"
             )
             status_label.grid(row=0, column=i, padx=10)
             
-            # Mark as complete if current or past
-            if status == display_status:
-                completed = True
-        
+            # Status text
+            status_text = ctk.CTkLabel(
+                status_frame,
+                text=status,
+                font=("Arial", 12),
+                text_color="#333333" if is_current or is_completed else "#999999"
+            )
+            status_text.grid(row=2, column=i, padx=10, pady=(5, 0))
+            
         # Order details label
         order_label = ctk.CTkLabel(
             self.order_container,
@@ -1135,19 +1261,42 @@ class OrdersFrame(ctk.CTkScrollableFrame):
         )
         order_label.pack(anchor="w", padx=15, pady=(15, 5))
         
-        # Order items
+        # Order items with images
         for item in order.get("Items", []):
             # Item frame
-            item_frame = ctk.CTkFrame(self.order_container, fg_color="#f9f9f9", corner_radius=5)
+            item_frame = ctk.CTkFrame(self.order_container, fg_color="#f9f9f9", corner_radius=10)
             item_frame.pack(fill="x", padx=15, pady=5)
             
-            # Item image placeholder
-            img_placeholder = ctk.CTkFrame(item_frame, width=80, height=80, fg_color="#e0e0e0")
-            img_placeholder.pack(side="left", padx=10, pady=10)
+            # Try to load menu item image
+            menu_id = item.get("MenuID", 0)
+            image_filename = f"menu_item_{menu_id}.png"
+            image_path = self.controller.get_image_path(image_filename, folder='menu')
             
-            # Placeholder text
-            placeholder_label = ctk.CTkLabel(img_placeholder, text="80 × 80", text_color="#999999")
-            placeholder_label.place(relx=0.5, rely=0.5, anchor="center")
+            # Item image
+            img_frame = ctk.CTkFrame(item_frame, width=60, height=60, fg_color="#e0e0e0", corner_radius=5)
+            img_frame.pack(side="left", padx=10, pady=10)
+            
+            if image_path:
+                try:
+                    # Load and resize image
+                    image = ctk.CTkImage(
+                        light_image=Image.open(image_path),
+                        size=(60, 60)
+                    )
+                    image_label = ctk.CTkLabel(
+                        img_frame, 
+                        image=image, 
+                        text=""
+                    )
+                    image_label.pack(expand=True, fill="both")
+                except Exception as e:
+                    # Fallback to text placeholder
+                    placeholder_label = ctk.CTkLabel(img_frame, text="Food", text_color="#999999")
+                    placeholder_label.place(relx=0.5, rely=0.5, anchor="center")
+            else:
+                # No image, use text placeholder
+                placeholder_label = ctk.CTkLabel(img_frame, text="Food", text_color="#999999")
+                placeholder_label.place(relx=0.5, rely=0.5, anchor="center")
             
             # Item details
             details_frame = ctk.CTkFrame(item_frame, fg_color="transparent")
@@ -1176,13 +1325,13 @@ class OrdersFrame(ctk.CTkScrollableFrame):
             # Quantity
             quantity_label = ctk.CTkLabel(
                 item_frame,
-                text=f"Quantity: {item.get('Quantity', 1)}",
-                font=("Arial", 12),
+                text=f"× {item.get('Quantity', 1)}",
+                font=("Arial", 14, "bold"),
                 text_color="#555555"
             )
             quantity_label.pack(side="right", padx=15)
         
-        # Delivery location section
+        # Map section
         location_label = ctk.CTkLabel(
             self.order_container,
             text="Delivery Location",
@@ -1191,13 +1340,33 @@ class OrdersFrame(ctk.CTkScrollableFrame):
         )
         location_label.pack(anchor="w", padx=15, pady=(15, 5))
         
-        # Map placeholder
-        map_frame = ctk.CTkFrame(self.order_container, fg_color="#e0e0e0", height=200)
+        # Map frame with placeholder map image
+        map_frame = ctk.CTkFrame(self.order_container, fg_color="#e0e0e0", height=180)
         map_frame.pack(fill="x", padx=15, pady=(5, 15))
         
-        # Map text
-        map_label = ctk.CTkLabel(map_frame, text="Map Placeholder", font=("Arial", 18), text_color="#999999")
-        map_label.place(relx=0.5, rely=0.5, anchor="center")
+        # Try to load a map image
+        map_path = os.path.join('static', 'images', 'map_placeholder.png')
+        
+        if os.path.exists(map_path):
+            try:
+                map_image = ctk.CTkImage(
+                    light_image=Image.open(map_path),
+                    size=(400, 180)
+                )
+                map_label = ctk.CTkLabel(
+                    map_frame, 
+                    image=map_image, 
+                    text=""
+                )
+                map_label.pack(expand=True, fill="both")
+            except Exception as e:
+                # Fallback to text placeholder
+                map_label = ctk.CTkLabel(map_frame, text="Delivery Map", font=("Arial", 18), text_color="#999999")
+                map_label.place(relx=0.5, rely=0.5, anchor="center")
+        else:
+            # No image, use text placeholder
+            map_label = ctk.CTkLabel(map_frame, text="Delivery Map", font=("Arial", 18), text_color="#999999")
+            map_label.place(relx=0.5, rely=0.5, anchor="center")
 
 class ProfileFrame(ctk.CTkScrollableFrame):
     """User profile screen showing user details and order history."""
@@ -1223,15 +1392,34 @@ class ProfileFrame(ctk.CTkScrollableFrame):
         )
         self.orders_label.pack(anchor="w", padx=15, pady=(0, 10))
         
-        # Past orders container
+        # Back to home button
+        self.back_button = ctk.CTkButton(
+            self,
+            text="Back to Home",
+            command=lambda: controller.show_frame("home"),
+            fg_color="#22C55E",
+            hover_color="#1DA346",
+            corner_radius=8,
+            width=120,
+            height=30
+        )
+        self.back_button.pack(anchor="ne", padx=15, pady=(0, 10))
+        
+        # Past orders container - use grid layout
         self.orders_container = ctk.CTkFrame(self, fg_color="transparent")
         self.orders_container.pack(fill="x", padx=15, pady=(0, 20))
         
-        # Create past order cards
+        # Configure grid columns for side-by-side cards
+        for i in range(3):  # Support up to 3 columns
+            self.orders_container.columnconfigure(i, weight=1, uniform="order_card")
+        
+        # Create past order cards in a grid
         past_orders = self.get_past_orders()
         if past_orders:
-            for order in past_orders:
-                self.create_order_card(order)
+            for i, order in enumerate(past_orders):
+                column = i % 3  # Place in columns 0, 1, 2
+                row = i // 3     # New row after every 3 cards
+                self.create_order_card(order, row, column)
         else:
             no_orders = ctk.CTkLabel(
                 self.orders_container,
@@ -1321,11 +1509,11 @@ class ProfileFrame(ctk.CTkScrollableFrame):
         
         return execute_query(query, (user_id,), fetch=True) or []
     
-    def create_order_card(self, order):
+    def create_order_card(self, order, row, column):
         """Create a card for a past order with placeholder for restaurant image."""
         # Card frame
         card = ctk.CTkFrame(self.orders_container, fg_color="white", corner_radius=10)
-        card.pack(fill="x", pady=5, ipady=10)
+        card.grid(row=row, column=column, padx=5, pady=5, sticky="nsew")
         
         # Restaurant image frame
         image_frame = ctk.CTkFrame(card, width=60, height=60, fg_color="#e0e0e0")

@@ -164,7 +164,7 @@ class LoginWindow(ctk.CTkFrame):
 
         # Form Frame (white login box on the right)
         self.form_frame = ctk.CTkFrame(self, fg_color="white", corner_radius=15, width=450, height=580)
-        self.form_frame.place(relx=0.738, rely=0.5, anchor="center")
+        self.form_frame.place(relx=0.735, rely=0.5, anchor="center")
         self.form_frame.pack_propagate(False)
         
         # Initialize with the login view

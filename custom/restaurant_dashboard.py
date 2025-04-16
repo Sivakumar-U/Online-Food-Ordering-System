@@ -38,15 +38,16 @@ class RestaurantDashboard(ctk.CTkFrame):
         self.show_frame("home")
         
     def get_restaurant_data(self):
-        """Fetch restaurant data from database."""
+        """Fetch restaurant data from database for the current user using RestaurantOwner table."""
         if not self.user_id:
             return {"Name": "Restaurant", "RestaurantID": None}
         
+        # Updated query to use the RestaurantOwner table
         query = """
             SELECT r.* 
             FROM Restaurant r
-            JOIN User u ON u.UserID = %s
-            WHERE u.Role = 'restaurant'
+            JOIN RestaurantOwner ro ON r.RestaurantID = ro.RestaurantID
+            WHERE ro.UserID = %s
         """
         result = execute_query(query, (self.user_id,), fetch=True)
         
