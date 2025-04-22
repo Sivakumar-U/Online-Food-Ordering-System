@@ -169,14 +169,26 @@ class LoginWindow(ctk.CTkFrame):
         
         # Initialize with the login view
         self.create_login_view()
-        
-        # Initialize with the login view
-        self.create_login_view()
 
     def clear_form_frame(self):
         """Clear all widgets in the form frame."""
         for widget in self.form_frame.winfo_children():
             widget.destroy()
+            
+    def add_back_button(self, parent_frame, command):
+        """Add a back button to the top-left corner of the frame."""
+        back_button = ctk.CTkButton(
+            parent_frame,
+            text="←",
+            command=command,
+            width=40,
+            height=40,
+            corner_radius=8,
+            fg_color="#FF5722",
+            hover_color="#E64A19",
+            font=("Arial", 20, "bold")
+        )
+        back_button.place(x=10, y=10)
 
     def create_login_view(self):
         """Create Login View that resembles the Figma design while preserving functionality."""
@@ -186,6 +198,9 @@ class LoginWindow(ctk.CTkFrame):
         # Create an inner frame to hold the form content
         self.inner_frame = ctk.CTkFrame(self.form_frame, fg_color="white", corner_radius=15)
         self.inner_frame.pack(expand=True, fill="both", padx=30, pady=30)
+        
+        # Add back button that goes to landing page
+        self.add_back_button(self.inner_frame, self.master.show_landing_page)
 
         # Welcome Back! Title
         self.title_label = ctk.CTkLabel(
@@ -195,9 +210,6 @@ class LoginWindow(ctk.CTkFrame):
             text_color="#333333"
         )
         self.title_label.pack(pady=(20, 30), anchor="center")
-
-        # User Type Selection (hidden but functional)
-        # self.user_type_var = ctk.StringVar(value="customer")
         
         # Email
         self.email_label = ctk.CTkLabel(
@@ -328,6 +340,9 @@ class LoginWindow(ctk.CTkFrame):
             height=520
         )
         self.scrollable_frame.pack(expand=True, fill="both", padx=20, pady=10)
+        
+        # Add back button
+        self.add_back_button(self.scrollable_frame, self.create_login_view)
 
         # Title
         self.title_label = ctk.CTkLabel(
@@ -446,18 +461,6 @@ class LoginWindow(ctk.CTkFrame):
         )
         self.password_entry.pack(pady=(0, 5), fill="x")
         
-        # Show Password Checkbox 
-        self.show_password_var = ctk.BooleanVar(value=False)
-        self.show_password_checkbox = ctk.CTkCheckBox(
-            self.scrollable_frame, 
-            text="Show Password", 
-            variable=self.show_password_var, 
-            command=self.toggle_password,
-            fg_color="#FF5722",
-            hover_color="#E64A19"
-        )
-        self.show_password_checkbox.pack(anchor="w", pady=(5, 5))
-        
         self.password_error_label = ctk.CTkLabel(
             self.scrollable_frame, 
             text="", 
@@ -466,6 +469,48 @@ class LoginWindow(ctk.CTkFrame):
             anchor="w"
         )
         self.password_error_label.pack(anchor="w", pady=(0, 5))
+        
+        # Confirm Password - NEW FIELD
+        self.confirm_password_label = ctk.CTkLabel(
+            self.scrollable_frame, 
+            text="Confirm Password", 
+            font=("Arial", 14), 
+            text_color="#555555",
+            anchor="w"
+        )
+        self.confirm_password_label.pack(anchor="w", pady=(0, 5))
+        
+        self.confirm_password_entry = ctk.CTkEntry(
+            self.scrollable_frame, 
+            placeholder_text="Confirm your password", 
+            show="*", 
+            width=380, 
+            height=40,
+            border_color="#DDDDDD",
+            corner_radius=5
+        )
+        self.confirm_password_entry.pack(pady=(0, 5), fill="x")
+        
+        self.confirm_password_error_label = ctk.CTkLabel(
+            self.scrollable_frame, 
+            text="", 
+            font=("Arial", 10), 
+            text_color="red",
+            anchor="w"
+        )
+        self.confirm_password_error_label.pack(anchor="w", pady=(0, 5))
+        
+        # Show Password Checkbox 
+        self.show_password_var = ctk.BooleanVar(value=False)
+        self.show_password_checkbox = ctk.CTkCheckBox(
+            self.scrollable_frame, 
+            text="Show Password", 
+            variable=self.show_password_var, 
+            command=self.toggle_signup_password,
+            fg_color="#FF5722",
+            hover_color="#E64A19"
+        )
+        self.show_password_checkbox.pack(anchor="w", pady=(5, 5))
         
         # Password requirements hint
         self.password_hint_label = ctk.CTkLabel(
@@ -540,17 +585,6 @@ class LoginWindow(ctk.CTkFrame):
             cursor="hand2"
         )
         self.back_to_login_label.pack(pady=(0, 10))
-        self.back_to_login_label.bind("<Button-1>", lambda e: self.create_login_view()).signup_button.pack(pady=(10, 15))
-
-        # Back to Login Button - text link instead of button to match design
-        self.back_to_login_label = ctk.CTkLabel(
-            self.inner_frame, 
-            text="Already have an account? Login", 
-            font=("Arial", 12), 
-            text_color="#FF5722", 
-            cursor="hand2"
-        )
-        self.back_to_login_label.pack(pady=(0, 10))
         self.back_to_login_label.bind("<Button-1>", lambda e: self.create_login_view())
 
     def create_forgot_password_view(self):
@@ -566,6 +600,9 @@ class LoginWindow(ctk.CTkFrame):
             height=520
         )
         self.scrollable_frame.pack(expand=True, fill="both", padx=20, pady=10)
+        
+        # Add back button
+        self.add_back_button(self.scrollable_frame, self.create_login_view)
 
         # Title
         self.title_label = ctk.CTkLabel(
@@ -626,18 +663,6 @@ class LoginWindow(ctk.CTkFrame):
         )
         self.new_password_entry.pack(pady=(0, 5), fill="x")
         
-        # Show Password Checkbox 
-        self.show_new_password_var = ctk.BooleanVar(value=False)
-        self.show_new_password_checkbox = ctk.CTkCheckBox(
-            self.scrollable_frame, 
-            text="Show Password", 
-            variable=self.show_new_password_var, 
-            command=self.toggle_new_password,
-            fg_color="#FF5722",
-            hover_color="#E64A19"
-        )
-        self.show_new_password_checkbox.pack(anchor="w", pady=(5, 5))
-        
         self.new_password_error_label = ctk.CTkLabel(
             self.scrollable_frame, 
             text="", 
@@ -645,7 +670,7 @@ class LoginWindow(ctk.CTkFrame):
             text_color="red",
             anchor="w"
         )
-        self.new_password_error_label.pack(anchor="w", pady=(0, 10))
+        self.new_password_error_label.pack(anchor="w", pady=(0, 5))
 
         # Confirm Password
         self.confirm_password_label = ctk.CTkLabel(
@@ -667,6 +692,18 @@ class LoginWindow(ctk.CTkFrame):
             corner_radius=5
         )
         self.confirm_password_entry.pack(pady=(0, 5), fill="x")
+        
+        # Show Password Checkbox 
+        self.show_new_password_var = ctk.BooleanVar(value=False)
+        self.show_new_password_checkbox = ctk.CTkCheckBox(
+            self.scrollable_frame, 
+            text="Show Password", 
+            variable=self.show_new_password_var, 
+            command=self.toggle_new_password,
+            fg_color="#FF5722",
+            hover_color="#E64A19"
+        )
+        self.show_new_password_checkbox.pack(anchor="w", pady=(5, 5))
         
         self.confirm_password_error_label = ctk.CTkLabel(
             self.scrollable_frame, 
@@ -716,8 +753,10 @@ class LoginWindow(ctk.CTkFrame):
         """Toggle new password visibility based on checkbox state."""
         if self.show_new_password_var.get():
             self.new_password_entry.configure(show="")
+            self.confirm_password_entry.configure(show="")
         else:
             self.new_password_entry.configure(show="*")
+            self.confirm_password_entry.configure(show="*")
 
     def toggle_password(self):
         """Toggle password visibility based on checkbox state."""
@@ -725,12 +764,20 @@ class LoginWindow(ctk.CTkFrame):
             self.password_entry.configure(show="")
         else:
             self.password_entry.configure(show="*")
+            
+    def toggle_signup_password(self):
+        """Toggle password visibility for signup form."""
+        if self.show_password_var.get():
+            self.password_entry.configure(show="")
+            self.confirm_password_entry.configure(show="")
+        else:
+            self.password_entry.configure(show="*")
+            self.confirm_password_entry.configure(show="*")
 
     def login(self):
         """Handle login attempt."""
         email = self.email_entry.get().strip()
         password = self.password_entry.get()
-        # user_type = self.user_type_var.get()
 
         # Reset error messages
         self.email_error_label.configure(text="")
@@ -750,7 +797,7 @@ class LoginWindow(ctk.CTkFrame):
 
         # Verify credentials
         user = validate_user(email, password)
-        if user :
+        if user:
             # Store user information in the main app
             self.master.current_user = user
             self.master.user_role = user['Role']
@@ -767,6 +814,7 @@ class LoginWindow(ctk.CTkFrame):
         last_name = self.last_name_entry.get().strip()
         email = self.email_entry.get().strip()
         password = self.password_entry.get()
+        confirm_password = self.confirm_password_entry.get()
         user_type = self.user_type_var.get()
 
         # Reset error messages
@@ -774,14 +822,11 @@ class LoginWindow(ctk.CTkFrame):
         self.last_name_error_label.configure(text="")
         self.email_error_label.configure(text="")
         self.password_error_label.configure(text="")
+        self.confirm_password_error_label.configure(text="")
 
         valid = True  # Validation flag
 
         # Validate fields
-        if not first_name:
-            self.first_name_error_label.configure(text="First Name is required.")
-            valid = False
-            
         if not last_name:
             self.last_name_error_label.configure(text="Last Name is required.")
             valid = False
@@ -794,6 +839,11 @@ class LoginWindow(ctk.CTkFrame):
             self.password_error_label.configure(
                 text="Password must meet all requirements."
             )
+            valid = False
+            
+        # Check if passwords match
+        if password != confirm_password:
+            self.confirm_password_error_label.configure(text="Passwords don't match.")
             valid = False
 
         if valid:
@@ -852,6 +902,37 @@ class LoginWindow(ctk.CTkFrame):
                 self.create_login_view()  # Redirect to login view on success
             else:
                 self.email_error_label.configure(text=message)
+
+# Function to create a custom message box with properly aligned buttons
+# In auth.py, update the custom_messagebox function
+def custom_messagebox(title, message, icon="info", option_1="OK", option_2=None):
+    msg_box = CTkMessagebox(
+        title=title,
+        message=message,
+        icon=icon,
+        option_1=option_1,
+        option_2=option_2
+    )
+    
+    # Fix button alignment - find the button container and adjust
+    for child in msg_box.winfo_children():
+        if isinstance(child, ctk.CTkFrame):
+            for inner_child in child.winfo_children():
+                if isinstance(inner_child, ctk.CTkFrame) and inner_child.winfo_children() and isinstance(inner_child.winfo_children()[0], ctk.CTkButton):
+                    button_container = inner_child
+                    button_container.configure(fg_color="transparent")
+                    
+                    # Center the buttons
+                    for button in button_container.winfo_children():
+                        if isinstance(button, ctk.CTkButton):
+                            button.pack_forget()
+                    
+                    # Repack the buttons centered
+                    buttons = [b for b in button_container.winfo_children() if isinstance(b, ctk.CTkButton)]
+                    for button in buttons:
+                        button.pack(side="left", padx=10, pady=5, expand=True, fill="none")
+    
+    return msg_box.get()
 
 # If module is run directly
 if __name__ == "__main__":

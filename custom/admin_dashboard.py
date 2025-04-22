@@ -59,7 +59,7 @@ class AdminDashboard(ctk.CTkFrame):
         """Show selected frame and hide others."""
         # Hide all frames
         for frame in [self.home_frame, self.users_frame, self.restaurants_frame, 
-                     self.orders_frame, self.settings_frame, self.reports_frame]:
+                    self.orders_frame, self.settings_frame, self.reports_frame]:
             frame.pack_forget()
         
         # Show selected frame
@@ -79,6 +79,11 @@ class AdminDashboard(ctk.CTkFrame):
         elif frame_name == "reports":
             self.reports_frame.refresh_data()
             self.reports_frame.pack(fill="both", expand=True)
+        
+        # Ensure navigation frame is always visible after changing frames
+        # It might be getting unpacked, so we repack it
+        self.navigation_frame.pack_forget()
+        self.navigation_frame.pack(side="bottom", fill="x")
     
     def sign_out(self):
         """Sign out and return to login screen."""
@@ -244,7 +249,7 @@ class UsersFrame(ctk.CTkFrame):
             self,
             fg_color="#f5f5f5",
             width=350,
-            height=450
+            height=420
         )
         self.users_container.pack(fill="both", expand=True, padx=15, pady=10)
         
@@ -347,17 +352,36 @@ class UsersFrame(ctk.CTkFrame):
         )
         edit_btn.pack(side="left", padx=5)
         
-        # Delete button
-        delete_btn = ctk.CTkButton(
+        # Replace delete button with active/inactive toggle
+        is_active = True  # You may want to add an 'IsActive' field to your User table
+        active_text = "Active" if is_active else "Inactive"
+        active_color = "#4CAF50" if is_active else "#F44336"
+        
+        active_btn = ctk.CTkButton(
             actions_frame,
-            text="Delete",
+            text=active_text,
             width=100,
-            fg_color="#F44336",
-            hover_color="#D32F2F",
-            command=lambda u=user: self.delete_user(u)
+            fg_color=active_color,
+            hover_color="#388E3C" if is_active else "#D32F2F",
+            command=lambda u=user: self.toggle_user_status(u)
         )
-        delete_btn.pack(side="right", padx=5)
+        active_btn.pack(side="right", padx=5)
     
+    def toggle_user_status(self, user):
+        """Toggle user active/inactive status."""
+        # This is where you would update the user status in your database
+        # For now, we'll just show a message
+        CTkMessagebox(
+            title="Status Changed",
+            message=f"User {user['FirstName']} {user['LastName']} status toggled.",
+            icon="info",
+            option_1="OK"
+        )
+        
+        # In a real implementation, you would update the database
+        # and refresh the users list
+        # self.refresh_users()
+
     def open_add_user_dialog(self):
         """Open dialog to add a new user."""
         dialog = ctk.CTkToplevel(self)
@@ -519,7 +543,17 @@ class UsersFrame(ctk.CTkFrame):
             conn = connect_to_database()
             cursor = conn.cursor()
             cursor.execute(query, (restaurant_name, "Mixed", "Not Set", "Not Set"))
+            restaurant_id = cursor.lastrowid
             conn.commit()
+            
+            # Link the user to the restaurant using RestaurantOwner table
+            owner_query = """
+                INSERT INTO RestaurantOwner (UserID, RestaurantID)
+                VALUES (%s, %s)
+            """
+            cursor.execute(owner_query, (user_id, restaurant_id))
+            conn.commit()
+            
             cursor.close()
             conn.close()
         except Exception as e:
@@ -845,7 +879,7 @@ class RestaurantsFrame(ctk.CTkFrame):
             self,
             fg_color="#f5f5f5",
             width=350,
-            height=450
+            height=420
         )
         self.restaurants_container.pack(fill="both", expand=True, padx=15, pady=10)
         
@@ -965,16 +999,19 @@ class RestaurantsFrame(ctk.CTkFrame):
         )
         edit_btn.pack(side="left", padx=5)
         
-        # Delete button
-        delete_btn = ctk.CTkButton(
+        is_active = True  # You may want to add an 'IsActive' field to your Restaurant table
+        active_text = "Active" if is_active else "Inactive"
+        active_color = "#4CAF50" if is_active else "#F44336"
+        
+        active_btn = ctk.CTkButton(
             actions_frame,
-            text="Delete",
+            text=active_text,
             width=100,
-            fg_color="#F44336",
-            hover_color="#D32F2F",
-            command=lambda r=restaurant: self.delete_restaurant(r)
+            fg_color=active_color,
+            hover_color="#388E3C" if is_active else "#D32F2F",
+            command=lambda r=restaurant: self.toggle_restaurant_status(r)
         )
-        delete_btn.pack(side="right", padx=5)
+        active_btn.pack(side="right", padx=5)
         
         # Assign owner button (only if no owner is assigned)
         if not restaurant.get('UserID'):
@@ -987,7 +1024,21 @@ class RestaurantsFrame(ctk.CTkFrame):
                 command=lambda r=restaurant: self.assign_restaurant_owner(r)
             )
             assign_btn.pack(fill="x", padx=10, pady=5)
-    
+    def toggle_restaurant_status(self, restaurant):
+        """Toggle restaurant active/inactive status."""
+        # This is where you would update the restaurant status in your database
+        # For now, we'll just show a message
+        CTkMessagebox(
+            title="Status Changed",
+            message=f"Restaurant '{restaurant['Name']}' status toggled.",
+            icon="info",
+            option_1="OK"
+        )
+        
+        # In a real implementation, you would update the database
+        # and refresh the restaurants list
+        # self.refresh_restaurants()
+
     def open_add_restaurant_dialog(self):
         """Open dialog to add a new restaurant."""
         dialog = ctk.CTkToplevel(self)
@@ -1480,7 +1531,7 @@ class OrdersFrame(ctk.CTkFrame):
             self,
             fg_color="#f5f5f5",
             width=350,
-            height=450
+            height=420
         )
         self.orders_container.pack(fill="both", expand=True, padx=15, pady=10)
         
@@ -1847,53 +1898,53 @@ class SettingsFrame(ctk.CTkFrame):
         )
         self.edit_button.pack(pady=(0, 20))
         
-        # System Settings Section
-        self.system_label = ctk.CTkLabel(
-            self,
-            text="System Settings",
-            font=("Arial", 18, "bold"),
-            text_color="#333333"
-        )
-        self.system_label.pack(anchor="w", padx=15, pady=(20, 10))
+        # # System Settings Section
+        # self.system_label = ctk.CTkLabel(
+        #     self,
+        #     text="System Settings",
+        #     font=("Arial", 18, "bold"),
+        #     text_color="#333333"
+        # )
+        # self.system_label.pack(anchor="w", padx=15, pady=(20, 10))
         
-        # System settings container
-        self.system_container = ctk.CTkFrame(self, fg_color="white", corner_radius=15)
-        self.system_container.pack(fill="x", padx=15, pady=(0, 20))
+        # # System settings container
+        # self.system_container = ctk.CTkFrame(self, fg_color="white", corner_radius=15)
+        # self.system_container.pack(fill="x", padx=15, pady=(0, 20))
         
-        # System settings options
-        settings = [
-            ("Database Backup", False),
-            ("Email Notifications", True),
-            ("Maintenance Mode", False)
-        ]
+        # # System settings options
+        # settings = [
+        #     ("Database Backup", False),
+        #     ("Email Notifications", True),
+        #     ("Maintenance Mode", False)
+        # ]
         
-        for setting, value in settings:
-            setting_frame = ctk.CTkFrame(self.system_container, fg_color="transparent")
-            setting_frame.pack(fill="x", padx=15, pady=10)
+        # for setting, value in settings:
+        #     setting_frame = ctk.CTkFrame(self.system_container, fg_color="transparent")
+        #     setting_frame.pack(fill="x", padx=15, pady=10)
             
-            setting_label = ctk.CTkLabel(
-                setting_frame,
-                text=setting,
-                font=("Arial", 14),
-                text_color="#333333",
-                anchor="w"
-            )
-            setting_label.pack(side="left")
+        #     setting_label = ctk.CTkLabel(
+        #         setting_frame,
+        #         text=setting,
+        #         font=("Arial", 14),
+        #         text_color="#333333",
+        #         anchor="w"
+        #     )
+        #     setting_label.pack(side="left")
             
-            switch_var = ctk.BooleanVar(value=value)
-            setting_switch = ctk.CTkSwitch(
-                setting_frame,
-                text="",
-                variable=switch_var,
-                command=lambda s=setting: self.toggle_setting(s),
-                switch_width=46,
-                switch_height=24,
-                fg_color="#CCCCCC",
-                progress_color="#4CAF50",
-                button_color="#FFFFFF",
-                button_hover_color="#EEEEEE"
-            )
-            setting_switch.pack(side="right")
+        #     switch_var = ctk.BooleanVar(value=value)
+        #     setting_switch = ctk.CTkSwitch(
+        #         setting_frame,
+        #         text="",
+        #         variable=switch_var,
+        #         command=lambda s=setting: self.toggle_setting(s),
+        #         switch_width=46,
+        #         switch_height=24,
+        #         fg_color="#CCCCCC",
+        #         progress_color="#4CAF50",
+        #         button_color="#FFFFFF",
+        #         button_hover_color="#EEEEEE"
+        #     )
+        #     setting_switch.pack(side="right")
         
         # Account Options Section
         self.account_label = ctk.CTkLabel(
@@ -2204,7 +2255,7 @@ class ReportsFrame(ctk.CTkFrame):
         self.title_label.pack(pady=(20, 15))
         
         # Create tab view for different reports
-        self.tab_view = ctk.CTkTabview(self, width=800, height=600)
+        self.tab_view = ctk.CTkTabview(self, width=600, height=400)
         self.tab_view.pack(fill="both", expand=True, padx=15, pady=15)
         
         # Create tabs
@@ -2267,7 +2318,7 @@ class ReportsFrame(ctk.CTkFrame):
         self.revenue_stats_frame.pack(fill="x", pady=10)
         
         # Chart frame
-        self.revenue_chart_frame = ctk.CTkFrame(tab, fg_color="white", corner_radius=10, height=300)
+        self.revenue_chart_frame = ctk.CTkFrame(tab, fg_color="white", corner_radius=10, height=250)
         self.revenue_chart_frame.pack(fill="both", expand=True, pady=10)
     
     def initialize_orders_tab(self):
@@ -2304,7 +2355,7 @@ class ReportsFrame(ctk.CTkFrame):
         self.orders_stats_frame.pack(fill="x", pady=10)
         
         # Orders over time chart
-        self.orders_chart_frame = ctk.CTkFrame(tab, fg_color="white", corner_radius=10, height=300)
+        self.orders_chart_frame = ctk.CTkFrame(tab, fg_color="white", corner_radius=10, height=250)
         self.orders_chart_frame.pack(fill="both", expand=True, pady=10)
     
     def initialize_restaurants_tab(self):
@@ -2316,7 +2367,7 @@ class ReportsFrame(ctk.CTkFrame):
         self.top_restaurants_frame.pack(fill="x", pady=10)
         
         # Restaurant statistics
-        self.restaurant_stats_frame = ctk.CTkFrame(tab, fg_color="white", corner_radius=10, height=300)
+        self.restaurant_stats_frame = ctk.CTkFrame(tab, fg_color="white", corner_radius=10, height=250)
         self.restaurant_stats_frame.pack(fill="both", expand=True, pady=10)
     
     def initialize_users_tab(self):
@@ -2328,7 +2379,7 @@ class ReportsFrame(ctk.CTkFrame):
         self.user_growth_frame.pack(fill="x", pady=10)
         
         # User statistics
-        self.user_stats_frame = ctk.CTkFrame(tab, fg_color="white", corner_radius=10, height=300)
+        self.user_stats_frame = ctk.CTkFrame(tab, fg_color="white", corner_radius=10, height=250)
         self.user_stats_frame.pack(fill="both", expand=True, pady=10)
     
     def refresh_data(self):

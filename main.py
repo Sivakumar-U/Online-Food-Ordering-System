@@ -273,7 +273,7 @@ def add_sample_data():
             conn.close()
 
 # Function to center any window
-def center_window(window, width=800, height=600):
+def center_window(window, width=800, height=650):
     """Centers a given window on the screen."""
     screen_width = window.winfo_screenwidth()
     screen_height = window.winfo_screenheight()
@@ -287,8 +287,7 @@ class FoodOrderingApp(ctk.CTk):
     def __init__(self):
         super().__init__()
         self.title("Online Food Ordering System")
-        self.geometry("800x600")
-        self.resizable(False,False)
+        self.geometry("800x650")
         center_window(self)  # Center the main application window
         
         # Set the application theme
@@ -353,8 +352,8 @@ class LandingPage(ctk.CTkFrame):
         # Background Image
         try:
             background_image_path = "static/images/landing_page_bg.jpg"
-            pil_image = Image.open(background_image_path).resize((800, 600))
-            self.background_image = ctk.CTkImage(light_image=pil_image, size=(800, 600))
+            pil_image = Image.open(background_image_path).resize((800, 650))
+            self.background_image = ctk.CTkImage(light_image=pil_image, size=(800, 650))
             
             # Background Label
             self.bg_label = ctk.CTkLabel(self, image=self.background_image, text="")
@@ -391,7 +390,7 @@ class LandingPage(ctk.CTkFrame):
             command=self.open_login_window,
             width=250,
             height=60,
-            corner_radius=0,
+            corner_radius=10,
             fg_color="#FF5722",
             hover_color="#E64A19",
             bg_color="transparent",

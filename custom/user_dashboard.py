@@ -293,9 +293,14 @@ class HomeFrame(ctk.CTkScrollableFrame):
         card = ctk.CTkFrame(outer_card, fg_color="white", corner_radius=15, width=300, height=350)
         card.pack(padx=2, pady=2)  # Small padding creates shadow effect
         
+        # Store restaurant ID for click handling
+        outer_card.restaurant_id = restaurant["RestaurantID"]
+        card.restaurant_id = restaurant["RestaurantID"]
+        
         # Restaurant image area - grey placeholder
         image_frame = ctk.CTkFrame(card, width=300, height=180, fg_color="#e0e0e0", corner_radius=10)
         image_frame.pack(padx=0, pady=0)
+        image_frame.restaurant_id = restaurant["RestaurantID"]
         
         # Try to load restaurant image
         image_filename = f"restaurant_{restaurant['RestaurantID']}.png"
@@ -316,6 +321,7 @@ class HomeFrame(ctk.CTkScrollableFrame):
                     text=""
                 )
                 image_label.pack(fill="both", expand=True)
+                image_label.restaurant_id = restaurant["RestaurantID"]
             except Exception as e:
                 print(f"Error loading image: {e}")
                 # Fallback to placeholder if image fails to load
@@ -326,6 +332,7 @@ class HomeFrame(ctk.CTkScrollableFrame):
                     text_color="#888888"
                 )
                 name_label.place(relx=0.5, rely=0.5, anchor="center")
+                name_label.restaurant_id = restaurant["RestaurantID"]
         else:
             # No image found, use grey placeholder with text
             name_label = ctk.CTkLabel(
@@ -335,16 +342,18 @@ class HomeFrame(ctk.CTkScrollableFrame):
                 text_color="#888888"
             )
             name_label.place(relx=0.5, rely=0.5, anchor="center")
+            name_label.restaurant_id = restaurant["RestaurantID"]
         
         # Restaurant name (large, bold)
-        name = ctk.CTkLabel(
+        name_label = ctk.CTkLabel(
             card,
             text=restaurant["Name"],
             font=("Arial", 16, "bold"),
             text_color="#333333",
             anchor="w"
         )
-        name.pack(anchor="w", padx=15, pady=(10, 0))
+        name_label.pack(anchor="w", padx=15, pady=(10, 0))
+        name_label.restaurant_id = restaurant["RestaurantID"]
         
         # Star rating display
         ratings = {"Pizza Place": 4.4, "Burger Haven": 4.5, "Sweet Treats": 3.5}
@@ -362,6 +371,7 @@ class HomeFrame(ctk.CTkScrollableFrame):
                 
         rating_frame = ctk.CTkFrame(card, fg_color="transparent")
         rating_frame.pack(fill="x", anchor="w", padx=15, pady=(5, 0))
+        rating_frame.restaurant_id = restaurant["RestaurantID"]
         
         rating_stars = ctk.CTkLabel(
             rating_frame,
@@ -371,6 +381,7 @@ class HomeFrame(ctk.CTkScrollableFrame):
             anchor="w"
         )
         rating_stars.pack(side="left")
+        rating_stars.restaurant_id = restaurant["RestaurantID"]
         
         rating_number = ctk.CTkLabel(
             rating_frame,
@@ -380,19 +391,21 @@ class HomeFrame(ctk.CTkScrollableFrame):
             anchor="w"
         )
         rating_number.pack(side="left", padx=(5, 0))
+        rating_number.restaurant_id = restaurant["RestaurantID"]
         
         # Delivery time 
         delivery_times = {"Pizza Place": 30, "Burger Haven": 25, "Sweet Treats": 20}
         delivery_time = delivery_times.get(restaurant["Name"], 20 + (index % 3) * 5)
         
-        delivery = ctk.CTkLabel(
+        delivery_label = ctk.CTkLabel(
             card,
             text=f"Estimated Delivery: {delivery_time} mins",
             font=("Arial", 12),
             text_color="#555555",
             anchor="w"
         )
-        delivery.pack(anchor="w", padx=15, pady=(5, 10))
+        delivery_label.pack(anchor="w", padx=15, pady=(5, 10))
+        delivery_label.restaurant_id = restaurant["RestaurantID"]
         
         # View menu button
         view_menu_btn = ctk.CTkButton(
@@ -407,23 +420,19 @@ class HomeFrame(ctk.CTkScrollableFrame):
         )
         view_menu_btn.pack(padx=15, pady=(10, 15))
         
-        # Bind click events to the entire card
+        # Direct click handler without binding
         def on_card_click(event):
-            self.view_restaurant_menu(restaurant["RestaurantID"])
+            r_id = getattr(event.widget, "restaurant_id", None)
+            if r_id:
+                self.view_restaurant_menu(r_id)
         
-        def on_enter(event):
-            outer_card.configure(cursor="hand2")
-            card.configure(fg_color="#f9f9f9")  # Subtle hover effect
+        # Bind events to the card and outer card only (not all child widgets)
+        outer_card.bind("<Button-1>", on_card_click)
+        card.bind("<Button-1>", on_card_click)
         
-        def on_leave(event):
-            outer_card.configure(cursor="")
-            card.configure(fg_color="white")
-        
-        # Bind events to make the whole card clickable
-        for widget in [outer_card, card, image_frame]:
-            widget.bind("<Button-1>", on_card_click)
-            widget.bind("<Enter>", on_enter)
-            widget.bind("<Leave>", on_leave)
+        # Simplified hover effect - only change the outer card color
+        outer_card.bind("<Enter>", lambda e: outer_card.configure(cursor="hand2"))
+        outer_card.bind("<Leave>", lambda e: outer_card.configure(cursor=""))
     
     def view_restaurant_menu(self, restaurant_id):
         """Open the restaurant menu screen."""
@@ -917,6 +926,20 @@ class CartFrame(ctk.CTkFrame):
             command=lambda i=item: self.update_quantity(i, 1)
         )
         increase_btn.pack(side="left", padx=(5, 0))
+
+        # Add a delete button after the quantity controls
+        delete_btn = ctk.CTkButton(
+            item_frame,
+            text="Delete",
+            width=60,
+            height=30,
+            corner_radius=5,
+            fg_color="#F44336",
+            hover_color="#D32F2F",
+            text_color="white",
+            command=lambda i=item: self.delete_item(i)
+        )
+        delete_btn.pack(side="right", padx=10)
         
         # Store reference to quantity label in item for updates
         item["quantity_label"] = quantity_label
@@ -1067,6 +1090,16 @@ class CartFrame(ctk.CTkFrame):
         except Exception as e:
             print(f"Database error creating order items: {e}")
             return False
+    def delete_item(self, item):
+        """Remove item from cart."""
+        # Find and remove item from cart
+        for i, cart_item in enumerate(self.controller.cart):
+            if cart_item["MenuID"] == item["MenuID"]:
+                self.controller.cart.pop(i)
+                break
+        
+        # Refresh cart display
+        self.refresh_cart()
 
 class OrdersFrame(ctk.CTkScrollableFrame):
     """Orders screen showing past and current orders."""

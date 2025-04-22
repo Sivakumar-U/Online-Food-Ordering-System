@@ -60,7 +60,7 @@ class RestaurantDashboard(ctk.CTkFrame):
         """Show selected frame and hide others."""
         # Hide all frames
         for frame in [self.home_frame, self.menu_frame, self.orders_frame, 
-                     self.analytics_frame, self.settings_frame]:
+                    self.analytics_frame, self.settings_frame]:
             frame.pack_forget()
         
         # Show selected frame
@@ -76,6 +76,11 @@ class RestaurantDashboard(ctk.CTkFrame):
             self.analytics_frame.pack(fill="both", expand=True)
         elif frame_name == "settings":
             self.settings_frame.pack(fill="both", expand=True)
+        
+        # Ensure navigation frame is always visible after changing frames
+        # It might be getting unpacked, so we repack it
+        self.navigation_frame.pack_forget()
+        self.navigation_frame.pack(side="bottom", fill="x")
     
     def sign_out(self):
         """Sign out and return to login screen."""
@@ -245,7 +250,7 @@ class MenuFrame(ctk.CTkFrame):
             self,
             fg_color="#f5f5f5",
             width=350,
-            height=450
+            height=420
         )
         self.menu_items_frame.pack(fill="both", expand=True, padx=15, pady=10)
         
@@ -375,18 +380,37 @@ class MenuFrame(ctk.CTkFrame):
         )
         edit_btn.pack(pady=5)
         
-        # Delete button
-        delete_btn = ctk.CTkButton(
+        # Replace delete button with active/inactive toggle
+        is_active = True  # You may want to add an 'IsActive' field to your Menu table
+        active_text = "Active" if is_active else "Inactive"
+        active_color = "#4CAF50" if is_active else "#F44336"
+        
+        active_btn = ctk.CTkButton(
             actions_frame,
-            text="Delete",
+            text=active_text,
             width=70,
             height=30,
-            fg_color="#F44336",
-            hover_color="#D32F2F",
+            fg_color=active_color,
+            hover_color="#388E3C" if is_active else "#D32F2F",
             corner_radius=5,
-            command=lambda i=item: self.delete_menu_item(i)
+            command=lambda i=item: self.toggle_menu_item_status(i)
         )
-        delete_btn.pack(pady=5)
+        active_btn.pack(pady=5)
+
+    def toggle_menu_item_status(self, item):
+        """Toggle menu item active/inactive status."""
+        # This is where you would update the menu item status in your database
+        # For now, we'll just show a message
+        CTkMessagebox(
+            title="Status Changed",
+            message=f"Menu item '{item['ItemName']}' status toggled.",
+            icon="info",
+            option_1="OK"
+        )
+        
+        # In a real implementation, you would update the database
+        # and refresh the menu items
+        # self.refresh_menu()
     
     def get_image_path(self, filename):
         """Get the full path to an image file."""
@@ -710,7 +734,7 @@ class OrdersFrame(ctk.CTkFrame):
             self,
             fg_color="#f5f5f5",
             width=350,
-            height=450
+            height=420
         )
         self.orders_container.pack(fill="both", expand=True, padx=15, pady=10)
         
@@ -908,8 +932,8 @@ class AnalyticsFrame(ctk.CTkFrame):
         self.analytics_container = ctk.CTkScrollableFrame(
             self,
             fg_color="#f5f5f5",
-            width=350,
-            height=450
+            width=320,
+            height=420
         )
         self.analytics_container.pack(fill="both", expand=True, padx=15, pady=10)
         

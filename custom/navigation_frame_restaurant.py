@@ -35,7 +35,7 @@ class NavigationFrameRestaurant(ctk.CTkFrame):
         frame.grid_rowconfigure((0, 1), weight=0)
         frame.grid_columnconfigure(0, weight=1)
         
-        # Create the button with icon text
+        # Create the button with icon text - MADE BOLD
         button = ctk.CTkButton(
             frame,
             text=icon,
@@ -45,15 +45,15 @@ class NavigationFrameRestaurant(ctk.CTkFrame):
             corner_radius=10,
             width=40,
             height=30,
-            font=("Arial", 18)
+            font=("Arial", 20, "bold")  # Increased font size from 18 to 20 and kept bold
         )
         button.grid(row=0, column=0, padx=5, pady=(5, 2))
         
-        # Create the text label
+        # For the text label
         label = ctk.CTkLabel(
             frame,
             text=text,
-            font=("Arial", 11),
+            font=("Arial", 12, "bold"),  # Increased font size from 11 to 12 and kept bold
             text_color="#808080",
             width=8,
             height=8
@@ -79,6 +79,9 @@ class NavigationFrameRestaurant(ctk.CTkFrame):
         
         # Tell the master frame to show the selected frame
         self.master.show_frame(frame_name)
+        
+        # Always make sure navigation is visible after frame change
+        self.master.navigation_frame.pack(side="bottom", fill="x")
 
     def reset_button_styles(self):
         """Reset all button styles to default."""
@@ -113,7 +116,7 @@ class NavigationFrameRestaurant(ctk.CTkFrame):
             fg_color="#FF5722",
             hover_color="#E64A19",
             corner_radius=5,
-            font=("Arial", 12),
+            font=("Arial", 12, "bold"),  # Added bold
             height=30,
             width=100
         )
