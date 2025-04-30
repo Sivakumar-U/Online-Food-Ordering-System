@@ -2245,6 +2245,9 @@ class ReportsFrame(ctk.CTkFrame):
         super().__init__(parent, fg_color="#f5f5f5", corner_radius=0)
         self.controller = controller
         
+        # Set a fixed height for the main frame to leave space for the navigation bar
+        self.configure(height=580)  # Limiting height to leave space for navbar
+        
         # Title
         self.title_label = ctk.CTkLabel(
             self,
@@ -2254,9 +2257,9 @@ class ReportsFrame(ctk.CTkFrame):
         )
         self.title_label.pack(pady=(20, 15))
         
-        # Create tab view for different reports
-        self.tab_view = ctk.CTkTabview(self, width=600, height=400)
-        self.tab_view.pack(fill="both", expand=True, padx=15, pady=15)
+        # Create a tab view with limited height
+        self.tab_view = ctk.CTkTabview(self, width=600, height=390)  # Reduced height
+        self.tab_view.pack(fill="x", padx=15, pady=10)  # Note: Using fill="x" instead of "both"
         
         # Create tabs
         self.tab_view.add("Revenue")
@@ -2264,32 +2267,54 @@ class ReportsFrame(ctk.CTkFrame):
         self.tab_view.add("Restaurants")
         self.tab_view.add("Users")
         
-        # Initialize tab contents
+        # Initialize tab contents - all as scrollable frames
         self.initialize_revenue_tab()
         self.initialize_orders_tab()
         self.initialize_restaurants_tab()
         self.initialize_users_tab()
         
-        # Export reports button
+        # Button frame with fixed height - not using expand=True
+        button_frame = ctk.CTkFrame(self, fg_color="transparent", height=50)
+        button_frame.pack(pady=(0, 15), fill="x")
+        
+        # Export reports button (CSV)
         self.export_button = ctk.CTkButton(
-            self,
-            text="Export Reports",
+            button_frame,
+            text="Export to CSV",
             command=self.export_reports,
             fg_color="#2196F3",
             hover_color="#1976D2",
             corner_radius=5,
             font=("Arial", 14),
             height=40,
-            width=200
+            width=150
         )
-        self.export_button.pack(pady=(0, 15))
+        self.export_button.pack(side="left", padx=(15, 5))
+        
+        # Download PDF reports button
+        self.download_button = ctk.CTkButton(
+            button_frame,
+            text="Download as PDF",
+            command=self.download_pdf_reports,
+            fg_color="#4CAF50",
+            hover_color="#388E3C",
+            corner_radius=5,
+            font=("Arial", 14),
+            height=40,
+            width=150
+        )
+        self.download_button.pack(side="left", padx=5)
     
     def initialize_revenue_tab(self):
         """Initialize the revenue tab content."""
         tab = self.tab_view.tab("Revenue")
         
+        # Create a scrollable frame with fixed height
+        scrollable_frame = ctk.CTkScrollableFrame(tab, fg_color="transparent", height=350)
+        scrollable_frame.pack(fill="both", expand=True)
+        
         # Date range selector
-        range_frame = ctk.CTkFrame(tab, fg_color="transparent")
+        range_frame = ctk.CTkFrame(scrollable_frame, fg_color="transparent")
         range_frame.pack(fill="x", pady=10)
         
         range_label = ctk.CTkLabel(
@@ -2314,19 +2339,23 @@ class ReportsFrame(ctk.CTkFrame):
         range_dropdown.pack(side="left")
         
         # Summary stats container
-        self.revenue_stats_frame = ctk.CTkFrame(tab, fg_color="white", corner_radius=10)
+        self.revenue_stats_frame = ctk.CTkFrame(scrollable_frame, fg_color="white", corner_radius=10)
         self.revenue_stats_frame.pack(fill="x", pady=10)
         
-        # Chart frame
-        self.revenue_chart_frame = ctk.CTkFrame(tab, fg_color="white", corner_radius=10, height=250)
-        self.revenue_chart_frame.pack(fill="both", expand=True, pady=10)
+        # Chart frame - reduced height to fit in available space
+        self.revenue_chart_frame = ctk.CTkFrame(scrollable_frame, fg_color="white", corner_radius=10, height=180)
+        self.revenue_chart_frame.pack(fill="x", pady=10)
     
     def initialize_orders_tab(self):
         """Initialize the orders tab content."""
         tab = self.tab_view.tab("Orders")
         
+        # Create a scrollable frame with fixed height
+        scrollable_frame = ctk.CTkScrollableFrame(tab, fg_color="transparent", height=350)
+        scrollable_frame.pack(fill="both", expand=True)
+        
         # Date range selector
-        range_frame = ctk.CTkFrame(tab, fg_color="transparent")
+        range_frame = ctk.CTkFrame(scrollable_frame, fg_color="transparent")
         range_frame.pack(fill="x", pady=10)
         
         range_label = ctk.CTkLabel(
@@ -2350,37 +2379,45 @@ class ReportsFrame(ctk.CTkFrame):
         )
         range_dropdown.pack(side="left")
         
-        # Status distribution chart
-        self.orders_stats_frame = ctk.CTkFrame(tab, fg_color="white", corner_radius=10, height=150)
+        # Status distribution chart - reduced height
+        self.orders_stats_frame = ctk.CTkFrame(scrollable_frame, fg_color="white", corner_radius=10, height=100)
         self.orders_stats_frame.pack(fill="x", pady=10)
         
-        # Orders over time chart
-        self.orders_chart_frame = ctk.CTkFrame(tab, fg_color="white", corner_radius=10, height=250)
-        self.orders_chart_frame.pack(fill="both", expand=True, pady=10)
+        # Orders over time chart - reduced height
+        self.orders_chart_frame = ctk.CTkFrame(scrollable_frame, fg_color="white", corner_radius=10, height=180)
+        self.orders_chart_frame.pack(fill="x", pady=10)
     
     def initialize_restaurants_tab(self):
         """Initialize the restaurants tab content."""
         tab = self.tab_view.tab("Restaurants")
         
-        # Top restaurants frame
-        self.top_restaurants_frame = ctk.CTkFrame(tab, fg_color="white", corner_radius=10, height=200)
+        # Create a scrollable frame with fixed height
+        scrollable_frame = ctk.CTkScrollableFrame(tab, fg_color="transparent", height=350)
+        scrollable_frame.pack(fill="both", expand=True)
+        
+        # Top restaurants frame - reduced height
+        self.top_restaurants_frame = ctk.CTkFrame(scrollable_frame, fg_color="white", corner_radius=10, height=130)
         self.top_restaurants_frame.pack(fill="x", pady=10)
         
-        # Restaurant statistics
-        self.restaurant_stats_frame = ctk.CTkFrame(tab, fg_color="white", corner_radius=10, height=250)
-        self.restaurant_stats_frame.pack(fill="both", expand=True, pady=10)
+        # Restaurant statistics - reduced height
+        self.restaurant_stats_frame = ctk.CTkFrame(scrollable_frame, fg_color="white", corner_radius=10, height=180)
+        self.restaurant_stats_frame.pack(fill="x", pady=10)
     
     def initialize_users_tab(self):
         """Initialize the users tab content."""
         tab = self.tab_view.tab("Users")
         
-        # User growth chart
-        self.user_growth_frame = ctk.CTkFrame(tab, fg_color="white", corner_radius=10, height=200)
+        # Create a scrollable frame with fixed height
+        scrollable_frame = ctk.CTkScrollableFrame(tab, fg_color="transparent", height=350)
+        scrollable_frame.pack(fill="both", expand=True)
+        
+        # User growth chart - reduced height
+        self.user_growth_frame = ctk.CTkFrame(scrollable_frame, fg_color="white", corner_radius=10, height=130)
         self.user_growth_frame.pack(fill="x", pady=10)
         
-        # User statistics
-        self.user_stats_frame = ctk.CTkFrame(tab, fg_color="white", corner_radius=10, height=250)
-        self.user_stats_frame.pack(fill="both", expand=True, pady=10)
+        # User statistics - reduced height
+        self.user_stats_frame = ctk.CTkFrame(scrollable_frame, fg_color="white", corner_radius=10, height=180)
+        self.user_stats_frame.pack(fill="x", pady=10)
     
     def refresh_data(self):
         """Refresh all report data."""
@@ -2964,7 +3001,8 @@ class ReportsFrame(ctk.CTkFrame):
             fig = Figure(figsize=(6, 5), dpi=100)
             ax = fig.add_subplot(111)
             
-            labels = [item['role'] for item in role_data]
+            user_names_dict = {'customer':'Customers', 'restaurant': 'Restaurant owners', 'admin':'Admins'}
+            labels = [user_names_dict[item['role']] for item in role_data]
             sizes = [item['count'] for item in role_data]
             colors = ['#FF9800', '#2196F3', '#4CAF50']
             
@@ -3093,6 +3131,326 @@ class ReportsFrame(ctk.CTkFrame):
             CTkMessagebox(
                 title="Export Error",
                 message=f"Error exporting reports: {e}",
+                icon="cancel",
+                option_1="OK"
+            )
+    def download_pdf_reports(self):
+        """Generate and download reports as PDF files."""
+        try:
+            import os
+            import matplotlib.pyplot as plt
+            from matplotlib.backends.backend_pdf import PdfPages
+            from datetime import datetime
+            import pandas as pd
+            from reportlab.lib.pagesizes import letter, landscape
+            from reportlab.lib import colors
+            from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer, Image
+            from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+            from reportlab.lib.units import inch
+            
+            # Create reports directory if it doesn't exist
+            reports_dir = "reports"
+            if not os.path.exists(reports_dir):
+                os.makedirs(reports_dir)
+            
+            # Generate timestamp for filenames
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            
+            # Get data for reports
+            revenue_data = self.get_revenue_chart_data(self.get_start_date_from_range("All Time"))
+            restaurant_data = self.get_top_restaurants()
+            user_data = self.get_user_role_distribution()
+            orders_data = self.get_orders_chart_data(self.get_start_date_from_range("All Time"))
+            
+            # Create PDF for Revenue Report
+            if revenue_data:
+                # Create the PDF
+                revenue_pdf_path = os.path.join(reports_dir, f"revenue_report_{timestamp}.pdf")
+                doc = SimpleDocTemplate(revenue_pdf_path, pagesize=letter)
+                elements = []
+                
+                # Add title
+                styles = getSampleStyleSheet()
+                title_style = ParagraphStyle(
+                    'Title',
+                    parent=styles['Heading1'],
+                    fontSize=18,
+                    spaceAfter=12
+                )
+                elements.append(Paragraph("Revenue Report", title_style))
+                elements.append(Spacer(1, 12))
+                
+                # Add date range info
+                elements.append(Paragraph(f"Date Range: All Time", styles["Normal"]))
+                elements.append(Spacer(1, 12))
+                
+                # Add total revenue info
+                total_revenue = self.get_total_revenue()
+                elements.append(Paragraph(f"Total Revenue: ${total_revenue:.2f}", styles["Normal"]))
+                elements.append(Spacer(1, 12))
+                
+                # Add revenue data as table
+                data = [["Date", "Revenue"]]
+                for item in revenue_data:
+                    data.append([item['date'], f"${item['revenue']:.2f}"])
+                
+                table = Table(data, colWidths=[2*inch, 2*inch])
+                table.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.lightblue),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                    ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                    ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                    ('GRID', (0, 0), (-1, -1), 1, colors.black)
+                ]))
+                
+                elements.append(table)
+                elements.append(Spacer(1, 12))
+                
+                # Add revenue chart
+                fig = plt.figure(figsize=(8, 4))
+                plt.plot([str(item['date']) for item in revenue_data], [item['revenue'] for item in revenue_data], marker='o')
+                plt.title('Revenue Over Time')
+                plt.xlabel('Date')
+                plt.ylabel('Revenue ($)')
+                plt.grid(True)
+                plt.xticks(rotation=45)
+                plt.tight_layout()
+                
+                # Save figure to a temporary file then add to PDF
+                chart_path = os.path.join(reports_dir, "temp_revenue_chart.png")
+                plt.savefig(chart_path)
+                plt.close()
+                
+                elements.append(Image(chart_path, width=6*inch, height=3*inch))
+                
+                # Build PDF
+                doc.build(elements)
+                
+                # Clean up temp file
+                if os.path.exists(chart_path):
+                    os.remove(chart_path)
+            
+            # Create PDF for Restaurant Report
+            if restaurant_data:
+                # Create the PDF
+                restaurant_pdf_path = os.path.join(reports_dir, f"restaurant_report_{timestamp}.pdf")
+                doc = SimpleDocTemplate(restaurant_pdf_path, pagesize=letter)
+                elements = []
+                
+                # Add title
+                styles = getSampleStyleSheet()
+                title_style = ParagraphStyle(
+                    'Title',
+                    parent=styles['Heading1'],
+                    fontSize=18,
+                    spaceAfter=12
+                )
+                elements.append(Paragraph("Top Restaurants Report", title_style))
+                elements.append(Spacer(1, 12))
+                
+                # Add restaurant data as table
+                data = [["Restaurant ID", "Name", "Cuisine", "Order Count", "Total Revenue"]]
+                for item in restaurant_data:
+                    data.append([
+                        item['RestaurantID'], 
+                        item['Name'], 
+                        item['Cuisine'], 
+                        item['order_count'], 
+                        f"${item['total_revenue']:.2f}"
+                    ])
+                
+                table = Table(data, colWidths=[0.8*inch, 2*inch, 1.2*inch, 1*inch, 1.5*inch])
+                table.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.lightblue),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                    ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                    ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                    ('GRID', (0, 0), (-1, -1), 1, colors.black)
+                ]))
+                
+                elements.append(table)
+                elements.append(Spacer(1, 12))
+                
+                # Add restaurant chart
+                fig = plt.figure(figsize=(8, 4))
+                plt.barh([item['Name'] for item in restaurant_data], [item['total_revenue'] for item in restaurant_data])
+                plt.title('Restaurant Revenue')
+                plt.xlabel('Revenue ($)')
+                plt.tight_layout()
+                
+                # Save figure to a temporary file then add to PDF
+                chart_path = os.path.join(reports_dir, "temp_restaurant_chart.png")
+                plt.savefig(chart_path)
+                plt.close()
+                
+                elements.append(Image(chart_path, width=6*inch, height=3*inch))
+                
+                # Build PDF
+                doc.build(elements)
+                
+                # Clean up temp file
+                if os.path.exists(chart_path):
+                    os.remove(chart_path)
+            
+            # Create PDF for User Report
+            if user_data:
+                # Create the PDF
+                user_pdf_path = os.path.join(reports_dir, f"user_report_{timestamp}.pdf")
+                doc = SimpleDocTemplate(user_pdf_path, pagesize=letter)
+                elements = []
+                
+                # Add title
+                styles = getSampleStyleSheet()
+                title_style = ParagraphStyle(
+                    'Title',
+                    parent=styles['Heading1'],
+                    fontSize=18,
+                    spaceAfter=12
+                )
+                elements.append(Paragraph("User Role Distribution Report", title_style))
+                elements.append(Spacer(1, 12))
+                
+                # Add user statistics
+                total_users = self.get_total_users()
+                active_users = self.get_active_users()
+                elements.append(Paragraph(f"Total Users: {total_users}", styles["Normal"]))
+                elements.append(Paragraph(f"Active Users: {active_users}", styles["Normal"]))
+                elements.append(Spacer(1, 12))
+                
+                # Add user data as table
+                data = [["Role", "Count", "Percentage"]]
+                for item in user_data:
+                    percentage = (item['count'] / total_users * 100) if total_users > 0 else 0
+                    data.append([item['role'], item['count'], f"{percentage:.1f}%"])
+                
+                table = Table(data, colWidths=[2*inch, 1*inch, 1.5*inch])
+                table.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.lightblue),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                    ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                    ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                    ('GRID', (0, 0), (-1, -1), 1, colors.black)
+                ]))
+                
+                elements.append(table)
+                elements.append(Spacer(1, 12))
+                user_names_dict = {'customer':'Customers', 'restaurant': 'Restaurant owners', 'admin':'Admins'}
+                # Add user pie chart
+                fig = plt.figure(figsize=(6, 6))
+                plt.pie([item['count'] for item in user_data], 
+                        labels=[user_names_dict[item['role']] for item in user_data],
+                        autopct='%1.1f%%',
+                        startangle=90,
+                        colors=['#FF9800', '#2196F3', '#4CAF50'])
+                plt.axis('equal')
+                plt.title('User Role Distribution')
+                
+                # Save figure to a temporary file then add to PDF
+                chart_path = os.path.join(reports_dir, "temp_user_chart.png")
+                plt.savefig(chart_path)
+                plt.close()
+                
+                elements.append(Image(chart_path, width=5*inch, height=5*inch))
+                
+                # Build PDF
+                doc.build(elements)
+                
+                # Clean up temp file
+                if os.path.exists(chart_path):
+                    os.remove(chart_path)
+            
+            # Create PDF for Orders Report
+            if orders_data:
+                # Create the PDF
+                orders_pdf_path = os.path.join(reports_dir, f"orders_report_{timestamp}.pdf")
+                doc = SimpleDocTemplate(orders_pdf_path, pagesize=letter)
+                elements = []
+                
+                # Add title
+                styles = getSampleStyleSheet()
+                title_style = ParagraphStyle(
+                    'Title',
+                    parent=styles['Heading1'],
+                    fontSize=18,
+                    spaceAfter=12
+                )
+                elements.append(Paragraph("Orders Report", title_style))
+                elements.append(Spacer(1, 12))
+                
+                # Add orders statistics
+                total_orders = self.get_total_orders()
+                elements.append(Paragraph(f"Total Orders: {total_orders}", styles["Normal"]))
+                elements.append(Spacer(1, 12))
+                
+                # Add orders data as table
+                data = [["Date", "Order Count"]]
+                for item in orders_data:
+                    data.append([item['date'], item['count']])
+                
+                table = Table(data, colWidths=[2*inch, 2*inch])
+                table.setStyle(TableStyle([
+                    ('BACKGROUND', (0, 0), (-1, 0), colors.lightblue),
+                    ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                    ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+                    ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+                    ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                    ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+                    ('GRID', (0, 0), (-1, -1), 1, colors.black)
+                ]))
+                
+                elements.append(table)
+                elements.append(Spacer(1, 12))
+                
+                # Add orders chart
+                fig = plt.figure(figsize=(8, 4))
+                plt.bar([str(item['date']) for item in orders_data], [item['count'] for item in orders_data], color='#4CAF50')
+                plt.title('Orders Over Time')
+                plt.xlabel('Date')
+                plt.ylabel('Order Count')
+                plt.grid(True, axis='y')
+                plt.xticks(rotation=45)
+                plt.tight_layout()
+                
+                # Save figure to a temporary file then add to PDF
+                chart_path = os.path.join(reports_dir, "temp_orders_chart.png")
+                plt.savefig(chart_path)
+                plt.close()
+                
+                elements.append(Image(chart_path, width=6*inch, height=3*inch))
+                
+                # Build PDF
+                doc.build(elements)
+                
+                # Clean up temp file
+                if os.path.exists(chart_path):
+                    os.remove(chart_path)
+            
+            # Show success message
+            CTkMessagebox(
+                title="Download Success",
+                message=f"Reports successfully downloaded to '{reports_dir}' directory!",
+                icon="check",
+                option_1="OK"
+            )
+        except ImportError:
+            # Show error message if required libraries are not installed
+            CTkMessagebox(
+                title="Download Error",
+                message="Could not generate PDF reports. Please install required packages: reportlab, matplotlib, pandas",
+                icon="cancel",
+                option_1="OK"
+            )
+        except Exception as e:
+            # Show error message
+            CTkMessagebox(
+                title="Download Error",
+                message=f"Error downloading reports: {e}",
                 icon="cancel",
                 option_1="OK"
             )

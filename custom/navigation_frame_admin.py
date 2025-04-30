@@ -9,6 +9,9 @@ class NavigationFrameAdmin(ctk.CTkFrame):
         # Configure frame appearance - change to white background with shadow
         self.configure(fg_color="white", height=70)
         
+        # Make sure the frame maintains its height
+        self.pack_propagate(False)
+        
         # Add a subtle top border for shadow effect
         self.border_frame = ctk.CTkFrame(self, height=1, fg_color="#e0e0e0")
         self.border_frame.place(relx=0, rely=0, relwidth=1)
@@ -79,9 +82,6 @@ class NavigationFrameAdmin(ctk.CTkFrame):
         
         # Tell the master frame to show the selected frame
         self.master.show_frame(frame_name)
-        
-        # Always make sure navigation is visible after frame change
-        self.master.navigation_frame.pack(side="bottom", fill="x")
 
     def reset_button_styles(self):
         """Reset all button styles to default."""

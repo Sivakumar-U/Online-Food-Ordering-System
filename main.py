@@ -4,12 +4,14 @@ from utils import connect_to_database  # Import the database connection utility
 from tkinter import messagebox
 from PIL import Image
 import bcrypt
+from datetime import datetime
 
 # Function to create the required tables for the Online Food Ordering system
 def create_tables():
     """
     Creates the necessary tables for the Online Food Ordering System.
     Tables include User, Restaurant, Menu, Order, OrderItem, and Delivery.
+    Added soft delete functionality and additional fields for profile features.
     """
     queries = {
         "users": """
@@ -19,7 +21,14 @@ def create_tables():
                 LastName VARCHAR(50) NOT NULL,
                 Email VARCHAR(100) NOT NULL UNIQUE,
                 Password VARCHAR(255) NOT NULL,
+                Phone VARCHAR(20),
+                Address VARCHAR(255),
+                DeliveryInstructions TEXT,
                 Role VARCHAR(20) NOT NULL DEFAULT 'customer',
+                IsActive BOOLEAN NOT NULL DEFAULT TRUE,
+                CreatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UpdatedAt TIMESTAMP NULL ON UPDATE CURRENT_TIMESTAMP,
+                DeletedAt TIMESTAMP NULL,
                 PRIMARY KEY (UserID)
             );
         """,
@@ -30,6 +39,10 @@ def create_tables():
                 Cuisine VARCHAR(50),
                 Contact VARCHAR(50),
                 Location VARCHAR(100),
+                IsActive BOOLEAN NOT NULL DEFAULT TRUE,
+                CreatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UpdatedAt TIMESTAMP NULL ON UPDATE CURRENT_TIMESTAMP,
+                DeletedAt TIMESTAMP NULL,
                 PRIMARY KEY (RestaurantID)
             );
         """,
@@ -38,6 +51,10 @@ def create_tables():
                 ID INT NOT NULL AUTO_INCREMENT,
                 UserID INT NOT NULL,
                 RestaurantID INT NOT NULL,
+                IsActive BOOLEAN NOT NULL DEFAULT TRUE,
+                CreatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UpdatedAt TIMESTAMP NULL ON UPDATE CURRENT_TIMESTAMP,
+                DeletedAt TIMESTAMP NULL,
                 PRIMARY KEY (ID),
                 FOREIGN KEY (UserID) REFERENCES User(UserID) ON DELETE CASCADE,
                 FOREIGN KEY (RestaurantID) REFERENCES Restaurant(RestaurantID) ON DELETE CASCADE
@@ -50,6 +67,10 @@ def create_tables():
                 ItemName VARCHAR(100) NOT NULL,
                 Description TEXT,
                 Price DECIMAL(10, 2) NOT NULL,
+                IsActive BOOLEAN NOT NULL DEFAULT TRUE,
+                CreatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UpdatedAt TIMESTAMP NULL ON UPDATE CURRENT_TIMESTAMP,
+                DeletedAt TIMESTAMP NULL,
                 PRIMARY KEY (MenuID),
                 FOREIGN KEY (RestaurantID) REFERENCES Restaurant(RestaurantID) ON DELETE CASCADE
             );
@@ -62,6 +83,9 @@ def create_tables():
                 TotalAmount DECIMAL(10, 2) NOT NULL,
                 OrderStatus VARCHAR(20) NOT NULL DEFAULT 'pending',
                 OrderDate TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                IsActive BOOLEAN NOT NULL DEFAULT TRUE,
+                UpdatedAt TIMESTAMP NULL ON UPDATE CURRENT_TIMESTAMP,
+                DeletedAt TIMESTAMP NULL,
                 PRIMARY KEY (OrderID),
                 FOREIGN KEY (UserID) REFERENCES User(UserID) ON DELETE CASCADE,
                 FOREIGN KEY (RestaurantID) REFERENCES Restaurant(RestaurantID) ON DELETE CASCADE
@@ -74,6 +98,10 @@ def create_tables():
                 MenuID INT NOT NULL,
                 Quantity INT NOT NULL,
                 Subtotal DECIMAL(10, 2) NOT NULL,
+                IsActive BOOLEAN NOT NULL DEFAULT TRUE,
+                CreatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UpdatedAt TIMESTAMP NULL ON UPDATE CURRENT_TIMESTAMP,
+                DeletedAt TIMESTAMP NULL,
                 PRIMARY KEY (OrderItemID),
                 FOREIGN KEY (OrderID) REFERENCES `Order`(OrderID) ON DELETE CASCADE,
                 FOREIGN KEY (MenuID) REFERENCES Menu(MenuID) ON DELETE CASCADE
@@ -86,9 +114,26 @@ def create_tables():
                 PersonnelID INT NOT NULL,
                 DeliveryStatus VARCHAR(20) NOT NULL DEFAULT 'pending',
                 EstimatedTime DATETIME,
+                IsActive BOOLEAN NOT NULL DEFAULT TRUE,
+                CreatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UpdatedAt TIMESTAMP NULL ON UPDATE CURRENT_TIMESTAMP,
+                DeletedAt TIMESTAMP NULL,
                 PRIMARY KEY (DeliveryID),
                 FOREIGN KEY (OrderID) REFERENCES `Order`(OrderID) ON DELETE CASCADE,
                 FOREIGN KEY (PersonnelID) REFERENCES User(UserID) ON DELETE CASCADE
+            );
+        """,
+        "settings": """
+            CREATE TABLE IF NOT EXISTS UserSettings (
+                SettingID INT NOT NULL AUTO_INCREMENT,
+                UserID INT NOT NULL,
+                SettingName VARCHAR(50) NOT NULL,
+                SettingValue BOOLEAN NOT NULL DEFAULT FALSE,
+                CreatedAt TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UpdatedAt TIMESTAMP NULL ON UPDATE CURRENT_TIMESTAMP,
+                PRIMARY KEY (SettingID),
+                UNIQUE KEY unique_user_setting (UserID, SettingName),
+                FOREIGN KEY (UserID) REFERENCES User(UserID) ON DELETE CASCADE
             );
         """
     }
@@ -131,18 +176,40 @@ def add_sample_data():
         # Add sample users
         hashed_password = bcrypt.hashpw("Password123!".encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
         sample_users = [
-            ("John", "Doe", "john@example.com", hashed_password, "customer"),
-            ("Jane", "Smith", "jane@example.com", hashed_password, "customer"),
-            ("Admin", "User", "admin@example.com", hashed_password, "admin"),
-            ("Rest", "Owner", "restaurant@example.com", hashed_password, "restaurant"),
-            ("Delivery", "Person", "delivery@example.com", hashed_password, "customer")
+            # Format: FirstName, LastName, Email, Password, Phone, Address, Role
+            ("John", "Doe", "john@food.com", hashed_password, "555-123-4567", "123 Main St, Chicago, IL 60601", "customer"),
+            ("Jane", "Smith", "jane@food.com", hashed_password, "555-987-6543", "456 Oak Ave, New York, NY 10001", "customer"),
+            ("Admin", "User", "admin@food.com", hashed_password, "555-111-2222", "789 Admin St, San Francisco, CA 94105", "admin"),
+            ("Rest", "Owner", "restaurant@food.com", hashed_password, "555-444-5555", "321 Chef Blvd, Miami, FL 33101", "restaurant"),
+            ("Delivery", "Person", "delivery@food.com", hashed_password, "555-777-8888", "555 Delivery Rd, Austin, TX 78701", "customer")
         ]
         
         user_query = """
-            INSERT INTO User (FirstName, LastName, Email, Password, Role) 
-            VALUES (%s, %s, %s, %s, %s)
+            INSERT INTO User (FirstName, LastName, Email, Password, Phone, Address, Role) 
+            VALUES (%s, %s, %s, %s, %s, %s, %s)
         """
         cursor.executemany(user_query, sample_users)
+        
+        # Add default user settings
+        settings_query = """
+            INSERT INTO UserSettings (UserID, SettingName, SettingValue)
+            VALUES (%s, %s, %s)
+        """
+        
+        # Default settings for John
+        default_settings = [
+            # UserID 1 (John Doe) settings
+            (1, "Notifications", True),
+            (1, "DarkMode", False),
+            (1, "AutoSaveAddress", True),
+            (1, "SavePaymentInfo", False),
+            # UserID 2 (Jane Smith) settings
+            (2, "Notifications", True),
+            (2, "DarkMode", False),
+            (2, "AutoSaveAddress", True),
+            (2, "SavePaymentInfo", False)
+        ]
+        cursor.executemany(settings_query, default_settings)
         
         # Add sample restaurants
         sample_restaurants = [
@@ -288,6 +355,7 @@ class FoodOrderingApp(ctk.CTk):
         super().__init__()
         self.title("Online Food Ordering System")
         self.geometry("800x650")
+        self.resizable(False,False)
         center_window(self)  # Center the main application window
         
         # Set the application theme
@@ -297,6 +365,7 @@ class FoodOrderingApp(ctk.CTk):
         # User session data
         self.current_user = None
         self.user_role = None
+        self.user_id = None
         
         # Start with the landing page
         self.show_landing_page()
@@ -327,6 +396,9 @@ class FoodOrderingApp(ctk.CTk):
             from custom.user_dashboard import UserDashboard
             self.dashboard = UserDashboard(master=self, user_id=self.current_user["UserID"])
         
+        # Store user ID for easy access
+        self.user_id = self.current_user["UserID"]
+        
         # Place the dashboard in the window
         self.dashboard.pack(fill="both", expand=True)
 
@@ -335,11 +407,22 @@ class FoodOrderingApp(ctk.CTk):
         for widget in self.winfo_children():
             widget.destroy()
             
-    def logout(self):
+    def sign_out(self):
         """Log out the current user and return to landing page."""
-        self.current_user = None
-        self.user_role = None
-        self.show_landing_page()
+        # Confirm sign out
+        from CTkMessagebox import CTkMessagebox
+        confirm = CTkMessagebox(
+            title="Sign Out",
+            message="Are you sure you want to sign out?",
+            icon="question",
+            option_1="Yes",
+            option_2="No"
+        )
+        if confirm.get() == "Yes":
+            self.current_user = None
+            self.user_role = None
+            self.user_id = None
+            self.show_landing_page()
 
 
 # Landing Page
@@ -389,8 +472,8 @@ class LandingPage(ctk.CTkFrame):
             text="Get Started",
             command=self.open_login_window,
             width=250,
-            height=60,
-            corner_radius=10,
+            height=70,
+            corner_radius=0,
             fg_color="#FF5722",
             hover_color="#E64A19",
             bg_color="transparent",

@@ -115,7 +115,6 @@ class UserDashboard(ctk.CTkFrame):
             return None
         
         return full_path
-    
 class HomeFrame(ctk.CTkScrollableFrame):
     """Home screen with restaurant listings and search functionality."""
     def __init__(self, parent, controller):
@@ -155,6 +154,19 @@ class HomeFrame(ctk.CTkScrollableFrame):
         # Colors for category buttons
         colors = ["#22C55E", "#FF9800", "#F44336", "#FFC107", "#9C27B0"]
         
+        # Create "All Restaurants" button first with distinct color
+        all_btn = ctk.CTkButton(
+            self.categories_frame,
+            text="All Restaurants",
+            fg_color="#3498db",  # Blue color for distinction
+            hover_color="#2980b9",
+            corner_radius=15,
+            width=120,  # Make it wider than other category buttons
+            height=30,
+            command=lambda: self.load_restaurants()
+        )
+        all_btn.pack(side="left", padx=5)
+        
         # Create category buttons
         for i, cuisine in enumerate(cuisines[:5]):  # Limit to 5 categories
             color = colors[i % len(colors)]
@@ -170,12 +182,18 @@ class HomeFrame(ctk.CTkScrollableFrame):
             )
             btn.pack(side="left", padx=5)
         
-        # Restaurant listings row (horizontal scrolling)
-        self.restaurants_row = ctk.CTkFrame(self, fg_color="transparent")
-        self.restaurants_row.pack(fill="x", pady=10)
+        # Create a frame for the restaurant grid
+        self.restaurants_container = ctk.CTkFrame(self, fg_color="transparent")
+        self.restaurants_container.pack(fill="both", expand=True, padx=10, pady=10)
         
-        # Load restaurant data
+        # Configure grid columns for restaurants (3 columns)
+        for i in range(3):
+            self.restaurants_container.columnconfigure(i, weight=1, uniform="column")
+        
+        # Load all restaurants by default
         self.load_restaurants()
+    
+
     
     def get_cuisines(self):
         """Get unique cuisines from the database."""
@@ -214,22 +232,25 @@ class HomeFrame(ctk.CTkScrollableFrame):
         restaurants = execute_query(query, (search_pattern, search_pattern, search_pattern), fetch=True)
         
         # Clear existing restaurants
-        for widget in self.restaurants_row.winfo_children():
+        for widget in self.restaurants_container.winfo_children():
             widget.destroy()
         
         if restaurants and len(restaurants) > 0:
-            # Create a restaurant card for each restaurant
+            # Create a restaurant card for each restaurant in grid layout
+            row_size = 3  # Number of restaurants per row
             for i, restaurant in enumerate(restaurants):
-                self.create_restaurant_card(restaurant, i)
+                row = i // row_size
+                col = i % row_size
+                self.create_restaurant_card(restaurant, i, row, col)
         else:
             # No results found
             no_results = ctk.CTkLabel(
-                self.restaurants_row,
+                self.restaurants_container,
                 text="No restaurants found matching your search.",
                 font=("Arial", 14),
                 text_color="#999999"
             )
-            no_results.pack(pady=50)
+            no_results.grid(row=0, column=0, columnspan=3, pady=50)
     
     def filter_by_cuisine(self, cuisine):
         """Filter restaurants by cuisine."""
@@ -237,27 +258,30 @@ class HomeFrame(ctk.CTkScrollableFrame):
         restaurants = execute_query(query, (cuisine,), fetch=True)
         
         # Clear existing restaurants
-        for widget in self.restaurants_row.winfo_children():
+        for widget in self.restaurants_container.winfo_children():
             widget.destroy()
         
         if restaurants and len(restaurants) > 0:
-            # Create a restaurant card for each restaurant
+            # Create a restaurant card for each restaurant in grid layout
+            row_size = 3  # Number of restaurants per row
             for i, restaurant in enumerate(restaurants):
-                self.create_restaurant_card(restaurant, i)
+                row = i // row_size
+                col = i % row_size
+                self.create_restaurant_card(restaurant, i, row, col)
         else:
             # No results found
             no_results = ctk.CTkLabel(
-                self.restaurants_row,
+                self.restaurants_container,
                 text=f"No restaurants found with cuisine: {cuisine}",
                 font=("Arial", 14),
                 text_color="#999999"
             )
-            no_results.pack(pady=50)
+            no_results.grid(row=0, column=0, columnspan=3, pady=50)
     
     def load_restaurants(self):
         """Load all restaurants."""
         # Clear existing restaurants
-        for widget in self.restaurants_row.winfo_children():
+        for widget in self.restaurants_container.winfo_children():
             widget.destroy()
         
         # Get restaurants from database
@@ -266,28 +290,33 @@ class HomeFrame(ctk.CTkScrollableFrame):
         if not restaurants:
             # No restaurants found
             no_results = ctk.CTkLabel(
-                self.restaurants_row,
+                self.restaurants_container,
                 text="No restaurants available.",
                 font=("Arial", 14),
                 text_color="#999999"
             )
-            no_results.pack(pady=50)
+            no_results.grid(row=0, column=0, columnspan=3, pady=50)
             return
         
-        # Create a restaurant card for each restaurant
+        # Create a restaurant card for each restaurant in a grid layout
+        row_size = 3  # Number of restaurants per row
         for i, restaurant in enumerate(restaurants):
-            self.create_restaurant_card(restaurant, i)
+            row = i // row_size
+            col = i % row_size
+            self.create_restaurant_card(restaurant, i, row, col)
     
     def get_restaurants(self):
         """Fetch restaurant data from database."""
         query = "SELECT * FROM Restaurant ORDER BY Name"
         return execute_query(query, fetch=True) or []
     
-    def create_restaurant_card(self, restaurant, index):
+    def create_restaurant_card(self, restaurant, index, row=0, col=0):
         """Create a card displaying restaurant information with actual image."""
         # Main card frame - with shadow effect using nested frames
-        outer_card = ctk.CTkFrame(self.restaurants_row, fg_color="#f5f5f5", corner_radius=15)
-        outer_card.pack(side="left", padx=10, pady=10)
+        outer_card = ctk.CTkFrame(self.restaurants_container, fg_color="#f5f5f5", corner_radius=15)
+        
+        # Position the card in the grid
+        outer_card.grid(row=row, column=col, padx=10, pady=10, sticky="nsew")
         
         # Inner card with white background
         card = ctk.CTkFrame(outer_card, fg_color="white", corner_radius=15, width=300, height=350)
@@ -613,7 +642,7 @@ class RestaurantMenuFrame(ctk.CTkScrollableFrame):
         image_frame.pack(fill="x", padx=5, pady=5)
         
         # Try to load menu item image
-        image_filename = f"menu_item_{item['MenuID']}.png"
+        image_filename = f"menu_item_{item['MenuID']}.jpg"
         image_path = self.controller.get_image_path(image_filename, folder='menu')
         
         if image_path:
@@ -837,7 +866,7 @@ class CartFrame(ctk.CTkFrame):
         image_frame.pack(side="left", padx=10, pady=10)
         
         # Try to load menu item image
-        image_filename = f"menu_item_{item['MenuID']}.png"
+        image_filename = f"menu_item_{item['MenuID']}.jpg"
         image_path = self.controller.get_image_path(image_filename, folder='menu')
         
         if image_path:
@@ -1302,7 +1331,7 @@ class OrdersFrame(ctk.CTkScrollableFrame):
             
             # Try to load menu item image
             menu_id = item.get("MenuID", 0)
-            image_filename = f"menu_item_{menu_id}.png"
+            image_filename = f"menu_item_{menu_id}.jpg"
             image_path = self.controller.get_image_path(image_filename, folder='menu')
             
             # Item image
@@ -1476,17 +1505,19 @@ class ProfileFrame(ctk.CTkScrollableFrame):
         self.profile_container.pack(fill="x", padx=15, pady=(0, 20))
         
         # Load user data
-        user_data = self.controller.user_data
+        self.user_data = self.controller.user_data
         
         # Profile fields
-        fields = [
-            ("Name:", f"{user_data.get('FirstName', 'John')} {user_data.get('LastName', 'Doe')}"),
-            ("Email:", user_data.get('Email', 'user@example.com')),
-            ("Address:", "123 Food St, Flavor Town"),
-            ("Payment Methods:", "Credit Card, PayPal")
+        self.fields_and_values = [
+            ("Name:", f"{self.user_data.get('FirstName', 'John')} {self.user_data.get('LastName', 'Doe')}"),
+            ("Email:", self.user_data.get('Email', 'user@example.com')),
+            ("Address:", self.user_data.get('Address', '123 Food St, Flavor Town')),
+            ("Phone:", self.user_data.get('Phone', '+1 (555) 123-4567'))
         ]
         
-        for i, (field, value) in enumerate(fields):
+        self.field_widgets = {}  # Store references to field labels for updating
+        
+        for i, (field, value) in enumerate(self.fields_and_values):
             # Field container
             field_frame = ctk.CTkFrame(self.profile_container, fg_color="transparent")
             field_frame.pack(fill="x", padx=15, pady=10)
@@ -1510,6 +1541,9 @@ class ProfileFrame(ctk.CTkScrollableFrame):
                 anchor="e"
             )
             value_label.pack(side="right")
+            
+            # Store reference to value label for updating later
+            self.field_widgets[field] = value_label
         
         # Edit profile button
         self.edit_button = ctk.CTkButton(
@@ -1693,13 +1727,211 @@ class ProfileFrame(ctk.CTkScrollableFrame):
         self.controller.show_frame("cart")
     
     def edit_profile(self):
-        """Open profile editing screen."""
-        CTkMessagebox(
-            title="Edit Profile",
-            message="Profile editing will be available in a future update.",
-            icon="info",
-            option_1="OK"
+        """Open profile editing modal window."""
+        # Create modal window
+        self.edit_window = ctk.CTkToplevel(self)
+        self.edit_window.title("Edit Profile")
+        self.edit_window.geometry("500x650")
+        self.edit_window.resizable(False, False)
+        
+        # Calculate center position
+        screen_width = self.edit_window.winfo_screenwidth()
+        screen_height = self.edit_window.winfo_screenheight()
+        x = (screen_width - 500) // 2
+        y = (screen_height - 650) // 2
+        self.edit_window.geometry(f"500x650+{x}+{y}")
+        
+        # Make it modal (block until closed)
+        self.edit_window.transient(self.master)
+        self.edit_window.grab_set()
+        
+        # Add a title
+        title_label = ctk.CTkLabel(
+            self.edit_window,
+            text="Edit Your Profile",
+            font=("Arial", 20, "bold"),
+            text_color="#333333"
         )
+        title_label.pack(pady=(20, 30))
+        
+        # Create form
+        form_frame = ctk.CTkFrame(self.edit_window, fg_color="transparent")
+        form_frame.pack(fill="both", expand=True, padx=30, pady=0)
+        
+        # Ensure user_data dict is initialized
+        if not hasattr(self, 'user_data') or self.user_data is None:
+            self.user_data = {}
+        
+        # Form fields
+        first_name_label = ctk.CTkLabel(form_frame, text="First Name:", anchor="w")
+        first_name_label.pack(anchor="w", pady=(0, 5))
+        
+        first_name_entry = ctk.CTkEntry(form_frame, width=440)
+        first_name_entry.pack(anchor="w", pady=(0, 15))
+        first_name_entry.insert(0, str(self.user_data.get("FirstName", "")))
+        
+        last_name_label = ctk.CTkLabel(form_frame, text="Last Name:", anchor="w")
+        last_name_label.pack(anchor="w", pady=(0, 5))
+        
+        last_name_entry = ctk.CTkEntry(form_frame, width=440)
+        last_name_entry.pack(anchor="w", pady=(0, 15))
+        last_name_entry.insert(0, str(self.user_data.get("LastName", "")))
+        
+        email_label = ctk.CTkLabel(form_frame, text="Email:", anchor="w")
+        email_label.pack(anchor="w", pady=(0, 5))
+        
+        email_entry = ctk.CTkEntry(form_frame, width=440)
+        email_entry.pack(anchor="w", pady=(0, 15))
+        email_entry.insert(0, str(self.user_data.get("Email", "")))
+        
+        phone_label = ctk.CTkLabel(form_frame, text="Phone:", anchor="w")
+        phone_label.pack(anchor="w", pady=(0, 5))
+        
+        phone_entry = ctk.CTkEntry(form_frame, width=440)
+        phone_entry.pack(anchor="w", pady=(0, 15))
+        # Convert None to empty string to avoid tkinter error
+        phone_entry.insert(0, str(self.user_data.get("Phone", "")))
+        
+        address_label = ctk.CTkLabel(form_frame, text="Address:", anchor="w")
+        address_label.pack(anchor="w", pady=(0, 5))
+        
+        address_entry = ctk.CTkEntry(form_frame, width=440)
+        address_entry.pack(anchor="w", pady=(0, 15))
+        address_entry.insert(0, str(self.user_data.get("Address", "")))
+
+        # Delivery instructions (new field)
+        delivery_label = ctk.CTkLabel(form_frame, text="Delivery Instructions (optional):", anchor="w")
+        delivery_label.pack(anchor="w", pady=(0, 5))
+        
+        delivery_instructions = ctk.CTkTextbox(form_frame, width=440, height=80)
+        delivery_instructions.pack(anchor="w", pady=(0, 15))
+        # Convert None to empty string for delivery instructions
+        delivery_instructions.insert("1.0", str(self.user_data.get("DeliveryInstructions", "")))
+        
+        # Buttons frame
+        buttons_frame = ctk.CTkFrame(self.edit_window, fg_color="transparent")
+        buttons_frame.pack(fill="x", pady=(0, 20), padx=30)
+        
+        cancel_button = ctk.CTkButton(
+            buttons_frame,
+            text="Cancel",
+            command=self.edit_window.destroy,
+            fg_color="#e0e0e0",
+            text_color="#333333",
+            hover_color="#d0d0d0",
+            width=150
+        )
+        cancel_button.pack(side="left", padx=(70, 10))
+        
+        save_button = ctk.CTkButton(
+            buttons_frame,
+            text="Save Changes",
+            command=lambda: self.save_profile_changes(
+                first_name_entry.get(),
+                last_name_entry.get(),
+                email_entry.get(),
+                phone_entry.get(),
+                address_entry.get(),
+                delivery_instructions.get("1.0", "end-1c")
+            ),
+            fg_color="#4CAF50",
+            hover_color="#388E3C",
+            width=150
+        )
+        save_button.pack(side="right", padx=(10, 70))
+
+    def save_profile_changes(self, first_name, last_name, email, phone, address, delivery_instructions=None):
+        """Save profile changes to database and update UI."""
+        # Validate inputs
+        if not first_name or not last_name or not email:
+            CTkMessagebox(
+                title="Validation Error",
+                message="First name, last name and email are required fields.",
+                icon="cancel",
+                option_1="OK"
+            )
+            return
+        
+        # Validate email format
+        import re
+        email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+        if not re.match(email_pattern, email):
+            CTkMessagebox(
+                title="Validation Error",
+                message="Please enter a valid email address.",
+                icon="cancel",
+                option_1="OK"
+            )
+            return
+        
+        # Validate that email is not already in use by another active user
+        if email != self.user_data.get("Email", ""):
+            check_query = """
+                SELECT UserID FROM User 
+                WHERE Email = %s AND UserID != %s AND IsActive = True AND DeletedAt IS NULL
+            """
+            result = execute_query(check_query, (email, self.controller.user_id), fetch=True)
+            if result and len(result) > 0:
+                CTkMessagebox(
+                    title="Validation Error",
+                    message="This email is already in use by another account.",
+                    icon="cancel",
+                    option_1="OK"
+                )
+                return
+        
+        # Update database
+        try:
+            query = """
+                UPDATE User 
+                SET FirstName = %s, LastName = %s, Email = %s, Phone = %s, 
+                    Address = %s, DeliveryInstructions = %s, UpdatedAt = NOW()
+                WHERE UserID = %s AND IsActive = True
+            """
+            
+            execute_query(
+                query, 
+                (first_name, last_name, email, phone, address, delivery_instructions, self.controller.user_id),
+                fetch=False
+            )
+            
+            # Update local user data
+            self.user_data["FirstName"] = first_name
+            self.user_data["LastName"] = last_name
+            self.user_data["Email"] = email
+            self.user_data["Phone"] = phone
+            self.user_data["Address"] = address
+            self.user_data["DeliveryInstructions"] = delivery_instructions
+            
+            # Update the controller's user_data
+            self.controller.user_data = self.user_data
+            
+            # Update displayed values
+            self.field_widgets["Name:"].configure(text=f"{first_name} {last_name}")
+            self.field_widgets["Email:"].configure(text=email)
+            self.field_widgets["Phone:"].configure(text=phone)
+            self.field_widgets["Address:"].configure(text=address)
+            
+            # Close the edit window
+            self.edit_window.destroy()
+            
+            # Show success message
+            CTkMessagebox(
+                title="Profile Updated",
+                message="Your profile has been updated successfully.",
+                icon="check",
+                option_1="OK"
+            )
+            
+        except Exception as e:
+            print(f"Error updating profile: {e}")
+            CTkMessagebox(
+                title="Update Error",
+                message="There was an error updating your profile. Please try again.",
+                icon="cancel",
+                option_1="OK"
+            )
+
 class SettingsFrame(ctk.CTkFrame):
     """Settings screen with application settings."""
     def __init__(self, parent, controller):
@@ -1726,6 +1958,8 @@ class SettingsFrame(ctk.CTkFrame):
             ("Auto-Save Address", True),
             ("Save Payment Info", False)
         ]
+        
+        self.setting_switches = {}  # Store references to switches
         
         for setting, value in settings:
             # Setting container
@@ -1757,6 +1991,9 @@ class SettingsFrame(ctk.CTkFrame):
                 button_hover_color="#EEEEEE"
             )
             setting_switch.pack(side="right")
+            
+            # Store reference to switch
+            self.setting_switches[setting] = (switch_var, setting_switch)
         
         # Account section
         self.account_label = ctk.CTkLabel(
@@ -1772,17 +2009,16 @@ class SettingsFrame(ctk.CTkFrame):
         account_container.pack(fill="x", padx=15, pady=(0, 20))
         
         account_options = [
-            "Change Password",
-            "Manage Payment Methods",
-            "Update Address",
-            "Sign Out"
+            ("Change Password", self.show_change_password_modal),
+            ("Update Address", self.show_update_address_modal),
+            ("Sign Out", self.controller.sign_out)
         ]
         
-        for option in account_options:
+        for option_text, command in account_options:
             option_button = ctk.CTkButton(
                 account_container,
-                text=option,
-                command=lambda o=option: self.handle_account_option(o),
+                text=option_text,
+                command=command,
                 fg_color="transparent",
                 hover_color="#f0f0f0",
                 text_color="#333333",
@@ -1794,16 +2030,379 @@ class SettingsFrame(ctk.CTkFrame):
     
     def toggle_setting(self, setting):
         """Handle toggling a setting."""
-        pass
-    
-    def handle_account_option(self, option):
-        """Handle account option clicks."""
-        if option == "Sign Out":
-            self.controller.sign_out()
-        else:
+        switch_var, _ = self.setting_switches.get(setting, (None, None))
+        if switch_var:
+            is_enabled = switch_var.get()
+            print(f"Setting '{setting}' is now {'enabled' if is_enabled else 'disabled'}")
+            
+            # Show confirmation toast
             CTkMessagebox(
-                title=option,
-                message=f"{option} will be available in a future update.",
+                title="Setting Updated",
+                message=f"{setting} {'enabled' if is_enabled else 'disabled'}.",
                 icon="info",
+                option_1="OK"
+            )
+    
+    def show_change_password_modal(self):
+        """Show modal window for changing password."""
+        # Create modal window
+        self.password_window = ctk.CTkToplevel(self)
+        self.password_window.title("Change Password")
+        self.password_window.geometry("500x450")
+        self.password_window.resizable(False, False)
+        
+        # Calculate center position
+        screen_width = self.password_window.winfo_screenwidth()
+        screen_height = self.password_window.winfo_screenheight()
+        x = (screen_width - 500) // 2
+        y = (screen_height - 450) // 2
+        self.password_window.geometry(f"500x450+{x}+{y}")
+        
+        # Make it modal (block until closed)
+        self.password_window.transient(self.master)
+        self.password_window.grab_set()
+        
+        # Add a title
+        title_label = ctk.CTkLabel(
+            self.password_window,
+            text="Change Your Password",
+            font=("Arial", 20, "bold"),
+            text_color="#333333"
+        )
+        title_label.pack(pady=(20, 30))
+        
+        # Create form
+        form_frame = ctk.CTkFrame(self.password_window, fg_color="transparent")
+        form_frame.pack(fill="both", expand=True, padx=30, pady=0)
+        
+        # Form fields
+        current_pwd_label = ctk.CTkLabel(form_frame, text="Current Password:", anchor="w")
+        current_pwd_label.pack(anchor="w", pady=(0, 5))
+        
+        current_pwd_entry = ctk.CTkEntry(form_frame, width=440, show="•")
+        current_pwd_entry.pack(anchor="w", pady=(0, 15))
+        
+        new_pwd_label = ctk.CTkLabel(form_frame, text="New Password:", anchor="w")
+        new_pwd_label.pack(anchor="w", pady=(0, 5))
+        
+        new_pwd_entry = ctk.CTkEntry(form_frame, width=440, show="•")
+        new_pwd_entry.pack(anchor="w", pady=(0, 5))
+        
+        # Password requirements text
+        pwd_req_label = ctk.CTkLabel(
+            form_frame, 
+            text="Password must be at least 8 characters with numbers and special characters.",
+            font=("Arial", 10),
+            text_color="#888888",
+            anchor="w"
+        )
+        pwd_req_label.pack(anchor="w", pady=(0, 15))
+        
+        confirm_pwd_label = ctk.CTkLabel(form_frame, text="Confirm New Password:", anchor="w")
+        confirm_pwd_label.pack(anchor="w", pady=(0, 5))
+        
+        confirm_pwd_entry = ctk.CTkEntry(form_frame, width=440, show="•")
+        confirm_pwd_entry.pack(anchor="w", pady=(0, 15))
+        
+        # Buttons frame
+        buttons_frame = ctk.CTkFrame(self.password_window, fg_color="transparent")
+        buttons_frame.pack(fill="x", pady=(0, 20), padx=30)
+        
+        cancel_button = ctk.CTkButton(
+            buttons_frame,
+            text="Cancel",
+            command=self.password_window.destroy,
+            fg_color="#e0e0e0",
+            text_color="#333333",
+            hover_color="#d0d0d0",
+            width=150
+        )
+        cancel_button.pack(side="left", padx=(70, 10))
+        
+        save_button = ctk.CTkButton(
+            buttons_frame,
+            text="Update Password",
+            command=lambda: self.update_password(
+                current_pwd_entry.get(),
+                new_pwd_entry.get(),
+                confirm_pwd_entry.get()
+            ),
+            fg_color="#4CAF50",
+            hover_color="#388E3C",
+            width=150
+        )
+        save_button.pack(side="right", padx=(10, 70))
+    
+    def update_password(self, current_password, new_password, confirm_password):
+        """Validate and update the user's password."""
+        # Validate inputs
+        if not current_password or not new_password or not confirm_password:
+            CTkMessagebox(
+                title="Missing Information",
+                message="Please fill in all password fields.",
+                icon="cancel",
+                option_1="OK"
+            )
+            return
+        
+        # Check if new password and confirm password match
+        if new_password != confirm_password:
+            CTkMessagebox(
+                title="Password Mismatch",
+                message="New password and confirm password do not match.",
+                icon="cancel",
+                option_1="OK"
+            )
+            return
+        
+        # Validate password strength
+        import re
+        
+        # At least 8 characters, contains number and special character
+        password_pattern = r'^(?=.*[0-9])(?=.*[!@#$%^&*])(.{8,})$'
+        if not re.match(password_pattern, new_password):
+            CTkMessagebox(
+                title="Weak Password",
+                message="Password must be at least 8 characters and include numbers and special characters.",
+                icon="cancel",
+                option_1="OK"
+            )
+            return
+        
+        # Verify current password
+        try:
+            import bcrypt
+            
+            # Get current password hash from database
+            query = "SELECT Password FROM User WHERE UserID = %s"
+            result = execute_query(query, (self.controller.user_id,), fetch=True)
+            
+            if not result:
+                raise Exception("User not found")
+                
+            stored_hash = result[0]["Password"]
+            
+            # Check if current password matches
+            if not bcrypt.checkpw(current_password.encode('utf-8'), stored_hash.encode('utf-8')):
+                CTkMessagebox(
+                    title="Incorrect Password",
+                    message="Current password is incorrect.",
+                    icon="cancel",
+                    option_1="OK"
+                )
+                return
+            
+            # Hash new password
+            new_hash = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+            
+            # Update password in database
+            update_query = "UPDATE User SET Password = %s WHERE UserID = %s"
+            execute_query(update_query, (new_hash, self.controller.user_id), fetch=False)
+            
+            # Close window
+            self.password_window.destroy()
+            
+            # Show success message
+            CTkMessagebox(
+                title="Password Updated",
+                message="Your password has been updated successfully.",
+                icon="check",
+                option_1="OK"
+            )
+            
+        except Exception as e:
+            print(f"Error updating password: {e}")
+            CTkMessagebox(
+                title="Update Error",
+                message="There was an error updating your password. Please try again.",
+                icon="cancel",
+                option_1="OK"
+            )
+    
+    def show_update_address_modal(self):
+        """Show modal window for updating address."""
+        # Create modal window
+        self.address_window = ctk.CTkToplevel(self)
+        self.address_window.title("Update Address")
+        self.address_window.geometry("500x600")
+        self.address_window.resizable(False, False)
+        
+        # Calculate center position
+        screen_width = self.address_window.winfo_screenwidth()
+        screen_height = self.address_window.winfo_screenheight()
+        x = (screen_width - 500) // 2
+        y = (screen_height - 600) // 2
+        self.address_window.geometry(f"500x600+{x}+{y}")
+        
+        # Make it modal (block until closed)
+        self.address_window.transient(self.master)
+        self.address_window.grab_set()
+        
+        # Add a title
+        title_label = ctk.CTkLabel(
+            self.address_window,
+            text="Update Your Address",
+            font=("Arial", 20, "bold"),
+            text_color="#333333"
+        )
+        title_label.pack(pady=(20, 30))
+        
+        # Get current user data
+        user_query = "SELECT * FROM User WHERE UserID = %s"
+        user_data = execute_query(user_query, (self.controller.user_id,), fetch=True)
+        current_address = user_data[0].get("Address", "") if user_data else ""
+        
+        # Create form
+        form_frame = ctk.CTkFrame(self.address_window, fg_color="transparent")
+        form_frame.pack(fill="both", expand=True, padx=30, pady=0)
+        
+        # Form fields
+        street_label = ctk.CTkLabel(form_frame, text="Street Address:", anchor="w")
+        street_label.pack(anchor="w", pady=(0, 5))
+        
+        street_entry = ctk.CTkEntry(form_frame, width=440)
+        street_entry.pack(anchor="w", pady=(0, 15))
+        
+        # Parse address and fill in fields if available
+        address_parts = current_address.split(',') if current_address else []
+        street = address_parts[0].strip() if len(address_parts) > 0 else ""
+        city = address_parts[1].strip() if len(address_parts) > 1 else ""
+        
+        # Extract state and zip if available
+        state_zip = ""
+        if len(address_parts) > 2:
+            state_zip_parts = address_parts[2].strip().split()
+            state = state_zip_parts[0] if len(state_zip_parts) > 0 else ""
+            zip_code = state_zip_parts[1] if len(state_zip_parts) > 1 else ""
+        else:
+            state = ""
+            zip_code = ""
+        
+        street_entry.insert(0, street)
+        
+        city_label = ctk.CTkLabel(form_frame, text="City:", anchor="w")
+        city_label.pack(anchor="w", pady=(0, 5))
+        
+        city_entry = ctk.CTkEntry(form_frame, width=440)
+        city_entry.pack(anchor="w", pady=(0, 15))
+        city_entry.insert(0, city)
+        
+        # State and ZIP row
+        state_zip_frame = ctk.CTkFrame(form_frame, fg_color="transparent")
+        state_zip_frame.pack(fill="x", pady=(0, 15))
+        
+        # State
+        state_label = ctk.CTkLabel(state_zip_frame, text="State:", anchor="w")
+        state_label.grid(row=0, column=0, sticky="w", pady=(0, 5))
+        
+        state_entry = ctk.CTkEntry(state_zip_frame, width=200)
+        state_entry.grid(row=1, column=0, sticky="w", padx=(0, 10))
+        state_entry.insert(0, state)
+        
+        # ZIP
+        zip_label = ctk.CTkLabel(state_zip_frame, text="ZIP Code:", anchor="w")
+        zip_label.grid(row=0, column=1, sticky="w", pady=(0, 5))
+        
+        zip_entry = ctk.CTkEntry(state_zip_frame, width=200)
+        zip_entry.grid(row=1, column=1, sticky="w")
+        zip_entry.insert(0, zip_code)
+        
+        # Additional notes
+        notes_label = ctk.CTkLabel(form_frame, text="Delivery Instructions (optional):", anchor="w")
+        notes_label.pack(anchor="w", pady=(10, 5))
+        
+        notes_entry = ctk.CTkTextbox(form_frame, width=440, height=80)
+        notes_entry.pack(anchor="w", pady=(0, 15))
+        
+        # Buttons frame
+        buttons_frame = ctk.CTkFrame(self.address_window, fg_color="transparent")
+        buttons_frame.pack(fill="x", pady=(0, 20), padx=30)
+        
+        cancel_button = ctk.CTkButton(
+            buttons_frame,
+            text="Cancel",
+            command=self.address_window.destroy,
+            fg_color="#e0e0e0",
+            text_color="#333333",
+            hover_color="#d0d0d0",
+            width=150
+        )
+        cancel_button.pack(side="left", padx=(70, 10))
+        
+        save_button = ctk.CTkButton(
+            buttons_frame,
+            text="Update Address",
+            command=lambda: self.save_address(
+                street_entry.get(),
+                city_entry.get(),
+                state_entry.get(),
+                zip_entry.get(),
+                notes_entry.get("1.0", "end-1c")
+            ),
+            fg_color="#4CAF50",
+            hover_color="#388E3C",
+            width=150
+        )
+        save_button.pack(side="right", padx=(10, 70))
+    
+    def save_address(self, street, city, state, zip_code, notes):
+        """Save address to database."""
+        # Validate inputs
+        if not street or not city or not state or not zip_code:
+            CTkMessagebox(
+                title="Missing Information",
+                message="Please fill in all required address fields.",
+                icon="cancel",
+                option_1="OK"
+            )
+            return
+        
+        # Validate zip code format
+        import re
+        zip_pattern = r'^\d{5}(-\d{4})?$'
+        if not re.match(zip_pattern, zip_code):
+            CTkMessagebox(
+                title="Invalid ZIP Code",
+                message="Please enter a valid 5-digit ZIP code or ZIP+4 format.",
+                icon="cancel",
+                option_1="OK"
+            )
+            return
+        
+        # Format complete address
+        formatted_address = f"{street}, {city}, {state} {zip_code}"
+        
+        # Add notes to delivery_instructions field if provided
+        if notes:
+            delivery_instructions = notes
+        else:
+            delivery_instructions = ""
+        
+        try:
+            # Update address in database
+            query = """
+                UPDATE User 
+                SET Address = %s, DeliveryInstructions = %s
+                WHERE UserID = %s
+            """
+            execute_query(query, (formatted_address, delivery_instructions, self.controller.user_id), fetch=False)
+            
+            # Close window
+            self.address_window.destroy()
+            
+            # Show success message
+            CTkMessagebox(
+                title="Address Updated",
+                message="Your delivery address has been updated successfully.",
+                icon="check",
+                option_1="OK"
+            )
+        
+        except Exception as e:
+            print(f"Error updating address: {e}")
+            CTkMessagebox(
+                title="Update Error",
+                message="There was an error updating your address. Please try again.",
+                icon="cancel",
                 option_1="OK"
             )

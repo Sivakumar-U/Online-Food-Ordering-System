@@ -919,6 +919,14 @@ class AnalyticsFrame(ctk.CTkFrame):
         super().__init__(parent, fg_color="#f5f5f5", corner_radius=0)
         self.controller = controller
         
+        # Import ttk
+        import tkinter as tk
+        from tkinter import ttk
+        
+        # Set a consistent limited height for the entire frame
+        # This leaves space at the bottom for the navigation bar
+        self.configure(height=580)  # Set maximum height to leave space for navbar
+        
         # Title
         self.title_label = ctk.CTkLabel(
             self,
@@ -928,107 +936,330 @@ class AnalyticsFrame(ctk.CTkFrame):
         )
         self.title_label.pack(pady=(20, 15))
         
-        # Create scrollable frame for analytics
-        self.analytics_container = ctk.CTkScrollableFrame(
-            self,
-            fg_color="#f5f5f5",
-            width=320,
-            height=420
-        )
-        self.analytics_container.pack(fill="both", expand=True, padx=15, pady=10)
+        # Create container frame with fixed height
+        self.analytics_container = ctk.CTkFrame(self, fg_color="#f5f5f5")
+        self.analytics_container.pack(fill="both", padx=15, pady=10)
+        
+        # Create tabs for different analytics views
+        self.tabview = ctk.CTkTabview(self.analytics_container, fg_color="white")
+        self.tabview.pack(fill="both", padx=10, pady=10)
+        
+        # Add tabs
+        self.tabview.add("Overview")
+        self.tabview.add("Top Items")
+        self.tabview.add("Order Status")
+        self.tabview.add("Time Analysis")
+        
+        # Set default tab
+        self.tabview.set("Overview")
+        
+        # Add style for treeview
+        self.style = ttk.Style()
+        self.style.configure("Treeview", 
+                             background="#ffffff",
+                             foreground="#333333",
+                             rowheight=30,
+                             fieldbackground="#ffffff")
+        self.style.configure("Treeview.Heading", 
+                             font=('Arial', 10, 'bold'),
+                             background="#f0f0f0")
+        self.style.map('Treeview', background=[('selected', '#22c55e')])
         
         # Load and display analytics
         self.load_analytics()
     
     def load_analytics(self):
         """Load and display various analytics metrics."""
+        import tkinter as tk
+        from tkinter import ttk
+        
         restaurant_id = self.controller.restaurant_data.get("RestaurantID")
         if not restaurant_id:
             self.show_no_data()
             return
         
-        # Prepare analytics sections
-        analytics_sections = [
-            ("Total Revenue", self.get_total_revenue(restaurant_id)),
-            ("Total Orders", self.get_total_orders(restaurant_id)),
-            ("Average Order Value", self.get_average_order_value(restaurant_id)),
-            ("Top-Selling Items", self.get_top_selling_items(restaurant_id)),
-            ("Order Status Distribution", self.get_order_status_distribution(restaurant_id))
+        # Create a scrollable frame for each tab to prevent overflow
+        # Overview Tab - Make it scrollable
+        overview_frame = ctk.CTkScrollableFrame(self.tabview.tab("Overview"), fg_color="white", height=400)
+        overview_frame.pack(fill="both", padx=10, pady=10)
+        
+        # Top Items Tab - Make it scrollable
+        top_items_frame = ctk.CTkScrollableFrame(self.tabview.tab("Top Items"), fg_color="white", height=400)
+        top_items_frame.pack(fill="both", padx=10, pady=10)
+        
+        # Order Status Tab
+        status_frame = ctk.CTkScrollableFrame(self.tabview.tab("Order Status"), fg_color="white", height=400)
+        status_frame.pack(fill="both", padx=10, pady=10)
+        
+        # Time Analysis Tab
+        time_frame = ctk.CTkScrollableFrame(self.tabview.tab("Time Analysis"), fg_color="white", height=400)
+        time_frame.pack(fill="both", padx=10, pady=10)
+        
+        # Summary data
+        total_revenue = self.get_total_revenue(restaurant_id)
+        total_orders = self.get_total_orders(restaurant_id)
+        avg_order_value = self.get_average_order_value(restaurant_id)
+        
+        # Create summary cards
+        summary_metrics = [
+            {"title": "Total Revenue", "value": f"${total_revenue:.2f}", "color": "#4CAF50"},
+            {"title": "Total Orders", "value": str(total_orders), "color": "#2196F3"},
+            {"title": "Average Order Value", "value": f"${avg_order_value:.2f}", "color": "#FF9800"}
         ]
         
-        # Display each analytics section
-        for title, data in analytics_sections:
-            section_frame = ctk.CTkFrame(self.analytics_container, fg_color="white", corner_radius=10)
-            section_frame.pack(fill="x", pady=5, ipady=10)
+        # Card container - Overview Tab
+        cards_frame = ctk.CTkFrame(overview_frame, fg_color="transparent")
+        cards_frame.pack(fill="x", padx=10, pady=10)
+        
+        # Create a grid for cards (3 columns)
+        for i, metric in enumerate(summary_metrics):
+            card = ctk.CTkFrame(cards_frame, fg_color="white", corner_radius=10, border_width=1, border_color="#e0e0e0")
+            card.grid(row=0, column=i, padx=10, pady=10, sticky="nsew")
             
-            # Section title
+            # Card content
             title_label = ctk.CTkLabel(
-                section_frame,
-                text=title,
-                font=("Arial", 16, "bold"),
-                text_color="#333333"
+                card,
+                text=metric["title"],
+                font=("Arial", 14, "bold"),
+                text_color="#555555"
             )
-            title_label.pack(anchor="w", padx=10, pady=(10, 5))
+            title_label.pack(anchor="w", padx=15, pady=(15, 5))
             
-            # Section content
-            if isinstance(data, (int, float)):
-                # Simple numeric value
-                value_label = ctk.CTkLabel(
-                    section_frame,
-                    text=f"{data}" if isinstance(data, int) else f"${data:.2f}",
-                    font=("Arial", 18),
-                    text_color="#4CAF50"
-                )
-                value_label.pack(padx=10, pady=5)
-            elif isinstance(data, list):
-                # List of items or key-value pairs
-                for item in data[:5]:  # Limit to top 5
-                    item_frame = ctk.CTkFrame(section_frame, fg_color="transparent")
-                    item_frame.pack(fill="x", padx=10, pady=2)
-                    
-                    if isinstance(item, dict):
-                        # For top-selling items or status distribution
-                        name_label = ctk.CTkLabel(
-                            item_frame,
-                            text=str(item.get('name', 'Unknown')),
-                            font=("Arial", 12),
-                            text_color="#666666"
-                        )
-                        name_label.pack(side="left")
-                        
-                        value_label = ctk.CTkLabel(
-                            item_frame,
-                            text=str(item.get('value', 0)),
-                            font=("Arial", 12),
-                            text_color="#4CAF50"
-                        )
-                        value_label.pack(side="right")
+            value_label = ctk.CTkLabel(
+                card,
+                text=metric["value"],
+                font=("Arial", 24, "bold"),
+                text_color=metric["color"]
+            )
+            value_label.pack(anchor="w", padx=15, pady=(0, 15))
+        
+        # Configure grid
+        for i in range(3):
+            cards_frame.grid_columnconfigure(i, weight=1, uniform="cards")
+        
+        # Recent orders section - Overview Tab
+        orders_frame = ctk.CTkFrame(overview_frame, fg_color="white", corner_radius=10, border_width=1, border_color="#e0e0e0")
+        orders_frame.pack(fill="x", padx=10, pady=10)
+        
+        # Title
+        orders_title = ctk.CTkLabel(
+            orders_frame,
+            text="Recent Orders",
+            font=("Arial", 16, "bold"),
+            text_color="#333333"
+        )
+        orders_title.pack(anchor="w", padx=15, pady=(15, 5))
+        
+        # Create treeview for recent orders - limit height
+        columns = ("order_id", "date", "customer", "amount", "status")
+        recent_orders_tree = ttk.Treeview(orders_frame, columns=columns, show="headings", height=5)  # Reduced height
+        
+        # Define columns
+        recent_orders_tree.heading("order_id", text="Order ID")
+        recent_orders_tree.heading("date", text="Date")
+        recent_orders_tree.heading("customer", text="Customer")
+        recent_orders_tree.heading("amount", text="Amount")
+        recent_orders_tree.heading("status", text="Status")
+        
+        # Set column widths
+        recent_orders_tree.column("order_id", width=70)
+        recent_orders_tree.column("date", width=120)
+        recent_orders_tree.column("customer", width=150)
+        recent_orders_tree.column("amount", width=100)
+        recent_orders_tree.column("status", width=100)
+        
+        # Get recent orders
+        recent_orders = self.get_recent_orders(restaurant_id)
+        
+        # Insert data
+        for order in recent_orders:
+            recent_orders_tree.insert("", "end", values=(
+                order.get("OrderID", ""),
+                order.get("OrderDate", ""),
+                f"{order.get('FirstName', '')} {order.get('LastName', '')}",
+                f"${float(order.get('TotalAmount', 0)):.2f}",
+                order.get("OrderStatus", "")
+            ))
+        
+        # Add scrollbar
+        orders_scrollbar = ttk.Scrollbar(orders_frame, orient="vertical", command=recent_orders_tree.yview)
+        recent_orders_tree.configure(yscrollcommand=orders_scrollbar.set)
+        orders_scrollbar.pack(side="right", fill="y")
+        recent_orders_tree.pack(fill="x", padx=15, pady=15)
+        
+        # Top items title - Top Items Tab
+        top_items_title = ctk.CTkLabel(
+            top_items_frame,
+            text="Top Selling Items",
+            font=("Arial", 16, "bold"),
+            text_color="#333333"
+        )
+        top_items_title.pack(anchor="w", padx=15, pady=(15, 5))
+        
+        # Create treeview for top items
+        columns = ("rank", "item_name", "quantity", "revenue")
+        top_items_tree = ttk.Treeview(top_items_frame, columns=columns, show="headings", height=8)  # Reduced height
+        
+        # Define columns
+        top_items_tree.heading("rank", text="Rank")
+        top_items_tree.heading("item_name", text="Item Name")
+        top_items_tree.heading("quantity", text="Quantity Sold")
+        top_items_tree.heading("revenue", text="Revenue")
+        
+        # Set column widths
+        top_items_tree.column("rank", width=50)
+        top_items_tree.column("item_name", width=200)
+        top_items_tree.column("quantity", width=100)
+        top_items_tree.column("revenue", width=100)
+        
+        # Get top selling items with revenue
+        top_items = self.get_top_selling_items_with_revenue(restaurant_id)
+        
+        # Insert data
+        for i, item in enumerate(top_items, 1):
+            top_items_tree.insert("", "end", values=(
+                i,
+                item.get("name", ""),
+                item.get("quantity", 0),
+                f"${float(item.get('revenue', 0)):.2f}"
+            ))
+        
+        # Add scrollbar
+        top_items_scrollbar = ttk.Scrollbar(top_items_frame, orient="vertical", command=top_items_tree.yview)
+        top_items_tree.configure(yscrollcommand=top_items_scrollbar.set)
+        top_items_scrollbar.pack(side="right", fill="y")
+        top_items_tree.pack(fill="x", padx=15, pady=15)
+        
+        # Status title - Order Status Tab
+        status_title = ctk.CTkLabel(
+            status_frame,
+            text="Order Status Distribution",
+            font=("Arial", 16, "bold"),
+            text_color="#333333"
+        )
+        status_title.pack(anchor="w", padx=15, pady=(15, 5))
+        
+        # Create treeview for status distribution
+        columns = ("status", "count", "percentage")
+        status_tree = ttk.Treeview(status_frame, columns=columns, show="headings", height=6)
+        
+        # Define columns
+        status_tree.heading("status", text="Order Status")
+        status_tree.heading("count", text="Count")
+        status_tree.heading("percentage", text="Percentage")
+        
+        # Set column widths
+        status_tree.column("status", width=150)
+        status_tree.column("count", width=100)
+        status_tree.column("percentage", width=100)
+        
+        # Get order status distribution
+        status_data = self.get_order_status_distribution(restaurant_id)
+        
+        # Calculate total orders for percentage
+        total_count = sum(item.get('value', 0) for item in status_data)
+        
+        # Insert data
+        for status in status_data:
+            percentage = (status.get('value', 0) / total_count * 100) if total_count > 0 else 0
+            status_tree.insert("", "end", values=(
+                status.get("name", ""),
+                status.get("value", 0),
+                f"{percentage:.1f}%"
+            ))
+        
+        # Add scrollbar
+        status_scrollbar = ttk.Scrollbar(status_frame, orient="vertical", command=status_tree.yview)
+        status_tree.configure(yscrollcommand=status_scrollbar.set)
+        status_scrollbar.pack(side="right", fill="y")
+        status_tree.pack(fill="x", padx=15, pady=15)
+        
+        # Time analysis title - Time Analysis Tab
+        time_title = ctk.CTkLabel(
+            time_frame,
+            text="Order Distribution by Day",
+            font=("Arial", 16, "bold"),
+            text_color="#333333"
+        )
+        time_title.pack(anchor="w", padx=15, pady=(15, 5))
+        
+        # Create treeview for time analysis
+        columns = ("day", "orders", "percentage", "revenue")
+        time_tree = ttk.Treeview(time_frame, columns=columns, show="headings", height=6)
+        
+        # Define columns
+        time_tree.heading("day", text="Day of Week")
+        time_tree.heading("orders", text="Orders")
+        time_tree.heading("percentage", text="Percentage")
+        time_tree.heading("revenue", text="Revenue")
+        
+        # Set column widths
+        time_tree.column("day", width=150)
+        time_tree.column("orders", width=100)
+        time_tree.column("percentage", width=100)
+        time_tree.column("revenue", width=100)
+        
+        # Get orders by day of week
+        time_data = self.get_orders_by_day(restaurant_id)
+        
+        # Calculate total orders for percentage
+        total_day_orders = sum(item.get('order_count', 0) for item in time_data)
+        
+        # Insert data
+        for day_data in time_data:
+            percentage = (day_data.get('order_count', 0) / total_day_orders * 100) if total_day_orders > 0 else 0
+            time_tree.insert("", "end", values=(
+                day_data.get("day_name", ""),
+                day_data.get("order_count", 0),
+                f"{percentage:.1f}%",
+                f"${float(day_data.get('revenue', 0)):.2f}"
+            ))
+        
+        # Add scrollbar
+        time_scrollbar = ttk.Scrollbar(time_frame, orient="vertical", command=time_tree.yview)
+        time_tree.configure(yscrollcommand=time_scrollbar.set)
+        time_scrollbar.pack(side="right", fill="y")
+        time_tree.pack(fill="x", padx=15, pady=15)
+
     
     def show_no_data(self):
         """Display message when no restaurant data is available."""
-        no_data_label = ctk.CTkLabel(
-            self.analytics_container,
-            text="No analytics data available.",
-            font=("Arial", 14),
-            text_color="#999999"
-        )
-        no_data_label.pack(pady=50)
+        for tab_name in ["Overview", "Top Items", "Order Status", "Time Analysis"]:
+            no_data_label = ctk.CTkLabel(
+                self.tabview.tab(tab_name),
+                text="No analytics data available.",
+                font=("Arial", 14),
+                text_color="#999999"
+            )
+            no_data_label.pack(pady=50)
     
     def get_total_revenue(self, restaurant_id):
         """Calculate total revenue for the restaurant."""
-        query = "SELECT SUM(TotalAmount) as total_revenue FROM `Order` WHERE RestaurantID = %s"
+        query = """
+            SELECT SUM(TotalAmount) as total_revenue 
+            FROM `Order` 
+            WHERE RestaurantID = %s AND IsActive = True AND DeletedAt IS NULL
+        """
         result = execute_query(query, (restaurant_id,), fetch=True)
         return result[0]['total_revenue'] if result and result[0]['total_revenue'] else 0.0
     
     def get_total_orders(self, restaurant_id):
         """Get total number of orders for the restaurant."""
-        query = "SELECT COUNT(*) as total_orders FROM `Order` WHERE RestaurantID = %s"
+        query = """
+            SELECT COUNT(*) as total_orders 
+            FROM `Order` 
+            WHERE RestaurantID = %s AND IsActive = True AND DeletedAt IS NULL
+        """
         result = execute_query(query, (restaurant_id,), fetch=True)
         return result[0]['total_orders'] if result else 0
     
     def get_average_order_value(self, restaurant_id):
         """Calculate average order value."""
-        query = "SELECT AVG(TotalAmount) as avg_order_value FROM `Order` WHERE RestaurantID = %s"
+        query = """
+            SELECT AVG(TotalAmount) as avg_order_value 
+            FROM `Order` 
+            WHERE RestaurantID = %s AND IsActive = True AND DeletedAt IS NULL
+        """
         result = execute_query(query, (restaurant_id,), fetch=True)
         return result[0]['avg_order_value'] if result and result[0]['avg_order_value'] else 0.0
     
@@ -1039,10 +1270,29 @@ class AnalyticsFrame(ctk.CTkFrame):
             FROM OrderItem oi
             JOIN Menu m ON oi.MenuID = m.MenuID
             JOIN `Order` o ON oi.OrderID = o.OrderID
-            WHERE o.RestaurantID = %s
+            WHERE o.RestaurantID = %s AND o.IsActive = True AND o.DeletedAt IS NULL
+            AND oi.IsActive = True AND oi.DeletedAt IS NULL
+            AND m.IsActive = True AND m.DeletedAt IS NULL
             GROUP BY m.ItemName
             ORDER BY value DESC
-            LIMIT 5
+            LIMIT 10
+        """
+        result = execute_query(query, (restaurant_id,), fetch=True)
+        return result if result else []
+    
+    def get_top_selling_items_with_revenue(self, restaurant_id):
+        """Get top-selling menu items with revenue."""
+        query = """
+            SELECT m.ItemName as name, SUM(oi.Quantity) as quantity, SUM(oi.Subtotal) as revenue
+            FROM OrderItem oi
+            JOIN Menu m ON oi.MenuID = m.MenuID
+            JOIN `Order` o ON oi.OrderID = o.OrderID
+            WHERE o.RestaurantID = %s AND o.IsActive = True AND o.DeletedAt IS NULL
+            AND oi.IsActive = True AND oi.DeletedAt IS NULL
+            AND m.IsActive = True AND m.DeletedAt IS NULL
+            GROUP BY m.ItemName
+            ORDER BY revenue DESC
+            LIMIT 15
         """
         result = execute_query(query, (restaurant_id,), fetch=True)
         return result if result else []
@@ -1052,8 +1302,37 @@ class AnalyticsFrame(ctk.CTkFrame):
         query = """
             SELECT OrderStatus as name, COUNT(*) as value
             FROM `Order`
-            WHERE RestaurantID = %s
+            WHERE RestaurantID = %s AND IsActive = True AND DeletedAt IS NULL
             GROUP BY OrderStatus
+            ORDER BY value DESC
+        """
+        result = execute_query(query, (restaurant_id,), fetch=True)
+        return result if result else []
+    
+    def get_recent_orders(self, restaurant_id):
+        """Get recent orders for the restaurant."""
+        query = """
+            SELECT o.OrderID, o.OrderDate, o.TotalAmount, o.OrderStatus, u.FirstName, u.LastName
+            FROM `Order` o
+            JOIN User u ON o.UserID = u.UserID
+            WHERE o.RestaurantID = %s AND o.IsActive = True AND o.DeletedAt IS NULL
+            ORDER BY o.OrderDate DESC
+            LIMIT 10
+        """
+        result = execute_query(query, (restaurant_id,), fetch=True)
+        return result if result else []
+    
+    def get_orders_by_day(self, restaurant_id):
+        """Get order distribution by day of week."""
+        query = """
+            SELECT 
+                DAYNAME(OrderDate) as day_name, 
+                COUNT(*) as order_count,
+                SUM(TotalAmount) as revenue
+            FROM `Order`
+            WHERE RestaurantID = %s AND IsActive = True AND DeletedAt IS NULL
+            GROUP BY day_name
+            ORDER BY FIELD(day_name, 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday')
         """
         result = execute_query(query, (restaurant_id,), fetch=True)
         return result if result else []

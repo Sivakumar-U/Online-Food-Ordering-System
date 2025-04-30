@@ -3,7 +3,7 @@ from tkinter import messagebox
 from PIL import Image
 import re  # For password validation
 import bcrypt
-from utils import connect_to_database, execute_query
+from utils import connect_to_database, execute_query, soft_delete
 from CTkMessagebox import CTkMessagebox  # Assuming you'll install this package
 
 # Function to validate user credentials
@@ -19,16 +19,16 @@ def validate_user(email, password):
         dict or None: User data if credentials are valid, None otherwise
     """
     try:
-        conn = connect_to_database()
-        cursor = conn.cursor(dictionary=True)
-        query = "SELECT * FROM User WHERE Email = %s"
-        cursor.execute(query, (email,))
-        user = cursor.fetchone()
-        cursor.close()
-        conn.close()
-
-        if user and bcrypt.checkpw(password.encode('utf-8'), user['Password'].encode('utf-8')):
-            return user
+        # Only get active users (not soft-deleted)
+        query = "SELECT * FROM User WHERE Email = %s AND IsActive = True AND DeletedAt IS NULL"
+        user = execute_query(query, (email,), fetch=True)
+        
+        if user and len(user) > 0:
+            user = user[0]  # Get the first user
+            if bcrypt.checkpw(password.encode('utf-8'), user['Password'].encode('utf-8')):
+                # Remove the password before returning user data
+                del user['Password']
+                return user
         return None
     except Exception as err:
         print(f"Database Error: {err}")
@@ -51,29 +51,46 @@ def register_user(first_name, last_name, email, password, role='customer'):
         bool: True if registration was successful, False otherwise
     """
     try:
-        conn = connect_to_database()
-        cursor = conn.cursor()
-
-        # Check if email already exists
-        check_query = "SELECT UserID FROM User WHERE Email = %s"
-        cursor.execute(check_query, (email,))
-        if cursor.fetchone():
-            cursor.close()
-            conn.close()
+        # Check if email already exists for active users
+        check_query = "SELECT UserID FROM User WHERE Email = %s AND IsActive = True AND DeletedAt IS NULL"
+        existing_user = execute_query(check_query, (email,), fetch=True)
+        
+        if existing_user:
             return False
 
         # Hash the password before storing
         hashed_password = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
         
-        # Insert the new user
+        # Insert the new user with IsActive flag
         query = """
-        INSERT INTO User (FirstName, LastName, Email, Password, Role)
-        VALUES (%s, %s, %s, %s, %s)
+        INSERT INTO User (FirstName, LastName, Email, Password, Role, IsActive, CreatedAt)
+        VALUES (%s, %s, %s, %s, %s, True, NOW())
         """
-        cursor.execute(query, (first_name, last_name, email, hashed_password, role))
-        conn.commit()
-        cursor.close()
-        conn.close()
+        execute_query(query, (first_name, last_name, email, hashed_password, role), fetch=False)
+        
+        # Add default settings for the new user
+        user_id_query = "SELECT UserID FROM User WHERE Email = %s"
+        user_result = execute_query(user_id_query, (email,), fetch=True)
+        
+        if user_result and len(user_result) > 0:
+            user_id = user_result[0]['UserID']
+            
+            # Default settings
+            settings_query = """
+            INSERT INTO UserSettings (UserID, SettingName, SettingValue, CreatedAt)
+            VALUES (%s, %s, %s, NOW())
+            """
+            
+            default_settings = [
+                (user_id, "Notifications", True),
+                (user_id, "DarkMode", False),
+                (user_id, "AutoSaveAddress", True),
+                (user_id, "SavePaymentInfo", False)
+            ]
+            
+            for setting in default_settings:
+                execute_query(settings_query, setting, fetch=False)
+                
         return True
     except Exception as err:
         print(f"Database Error: {err}")
@@ -93,26 +110,18 @@ def reset_password_logic(email, new_password):
         tuple: (success_boolean, message_string)
     """
     try:
-        conn = connect_to_database()
-        cursor = conn.cursor()
-
-        # Check if email exists
-        query = "SELECT UserID FROM User WHERE Email = %s"
-        cursor.execute(query, (email,))
-        user = cursor.fetchone()
+        # Check if email exists for active user
+        query = "SELECT UserID FROM User WHERE Email = %s AND IsActive = True AND DeletedAt IS NULL"
+        user = execute_query(query, (email,), fetch=True)
+        
         if not user:
-            cursor.close()
-            conn.close()
-            return False, "Email not found."
+            return False, "Email not found or account is inactive."
 
         # Update password with hash
         hashed_password = bcrypt.hashpw(new_password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
-        update_query = "UPDATE User SET Password = %s WHERE Email = %s"
-        cursor.execute(update_query, (hashed_password, email))
-        conn.commit()
-
-        cursor.close()
-        conn.close()
+        update_query = "UPDATE User SET Password = %s, UpdatedAt = NOW() WHERE Email = %s"
+        execute_query(update_query, (hashed_password, email), fetch=False)
+        
         return True, "Password reset successfully."
     except Exception as err:
         return False, f"Database error: {err}"
@@ -795,16 +804,18 @@ class LoginWindow(ctk.CTkFrame):
             self.password_error_label.configure(text="Password is required.")
             return
 
-        # Verify credentials
+        # Verify credentials - will only return active (not soft-deleted) users
         user = validate_user(email, password)
         if user:
             # Store user information in the main app
             self.master.current_user = user
             self.master.user_role = user['Role']
+            self.master.user_id = user['UserID']
             
             # Show the appropriate dashboard
             self.master.show_dashboard()
         else:
+            # Show error message for invalid credentials
             # Show error message for invalid credentials
             self.password_error_label.configure(text="Invalid email or password.")
 
@@ -825,16 +836,23 @@ class LoginWindow(ctk.CTkFrame):
         self.confirm_password_error_label.configure(text="")
 
         valid = True  # Validation flag
+        
+        # Validate first name
+        if not first_name:
+            self.first_name_error_label.configure(text="First Name is required.")
+            valid = False
 
-        # Validate fields
+        # Validate last name
         if not last_name:
             self.last_name_error_label.configure(text="Last Name is required.")
             valid = False
             
+        # Validate email
         if not email or "@" not in email or "." not in email:
             self.email_error_label.configure(text="Invalid email address.")
             valid = False
             
+        # Validate password strength
         if not is_password_strong(password):
             self.password_error_label.configure(
                 text="Password must meet all requirements."
@@ -904,7 +922,6 @@ class LoginWindow(ctk.CTkFrame):
                 self.email_error_label.configure(text=message)
 
 # Function to create a custom message box with properly aligned buttons
-# In auth.py, update the custom_messagebox function
 def custom_messagebox(title, message, icon="info", option_1="OK", option_2=None):
     msg_box = CTkMessagebox(
         title=title,
