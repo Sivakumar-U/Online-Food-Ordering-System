@@ -6,3 +6,6 @@ tkintermapview
 matplotlib
 CTkMessagebox
 CTkSpinbox
+reportlab 
+matplotlib 
+pandas

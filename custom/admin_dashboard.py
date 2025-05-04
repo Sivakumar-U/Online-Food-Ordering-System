@@ -3001,8 +3001,7 @@ class ReportsFrame(ctk.CTkFrame):
             fig = Figure(figsize=(6, 5), dpi=100)
             ax = fig.add_subplot(111)
             
-            user_names_dict = {'customer':'Customers', 'restaurant': 'Restaurant owners', 'admin':'Admins'}
-            labels = [user_names_dict[item['role']] for item in role_data]
+            labels = [item['role'] for item in role_data]
             sizes = [item['count'] for item in role_data]
             colors = ['#FF9800', '#2196F3', '#4CAF50']
             
@@ -3154,7 +3153,9 @@ class ReportsFrame(ctk.CTkFrame):
                 os.makedirs(reports_dir)
             
             # Generate timestamp for filenames
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            now = datetime.now()
+            timestamp = now.strftime("%Y%m%d_%H%M%S")
+            formatted_datetime = now.strftime("%Y-%m-%d %H:%M:%S")
             
             # Get data for reports
             revenue_data = self.get_revenue_chart_data(self.get_start_date_from_range("All Time"))
@@ -3178,6 +3179,10 @@ class ReportsFrame(ctk.CTkFrame):
                     spaceAfter=12
                 )
                 elements.append(Paragraph("Revenue Report", title_style))
+                elements.append(Spacer(1, 12))
+                
+                # Add generation timestamp
+                elements.append(Paragraph(f"Generated on: {formatted_datetime}", styles["Normal"]))
                 elements.append(Spacer(1, 12))
                 
                 # Add date range info
@@ -3250,6 +3255,10 @@ class ReportsFrame(ctk.CTkFrame):
                 elements.append(Paragraph("Top Restaurants Report", title_style))
                 elements.append(Spacer(1, 12))
                 
+                # Add generation timestamp
+                elements.append(Paragraph(f"Generated on: {formatted_datetime}", styles["Normal"]))
+                elements.append(Spacer(1, 12))
+                
                 # Add restaurant data as table
                 data = [["Restaurant ID", "Name", "Cuisine", "Order Count", "Total Revenue"]]
                 for item in restaurant_data:
@@ -3314,6 +3323,10 @@ class ReportsFrame(ctk.CTkFrame):
                 elements.append(Paragraph("User Role Distribution Report", title_style))
                 elements.append(Spacer(1, 12))
                 
+                # Add generation timestamp
+                elements.append(Paragraph(f"Generated on: {formatted_datetime}", styles["Normal"]))
+                elements.append(Spacer(1, 12))
+                
                 # Add user statistics
                 total_users = self.get_total_users()
                 active_users = self.get_active_users()
@@ -3340,6 +3353,7 @@ class ReportsFrame(ctk.CTkFrame):
                 
                 elements.append(table)
                 elements.append(Spacer(1, 12))
+                
                 user_names_dict = {'customer':'Customers', 'restaurant': 'Restaurant owners', 'admin':'Admins'}
                 # Add user pie chart
                 fig = plt.figure(figsize=(6, 6))
@@ -3381,6 +3395,10 @@ class ReportsFrame(ctk.CTkFrame):
                     spaceAfter=12
                 )
                 elements.append(Paragraph("Orders Report", title_style))
+                elements.append(Spacer(1, 12))
+                
+                # Add generation timestamp
+                elements.append(Paragraph(f"Generated on: {formatted_datetime}", styles["Normal"]))
                 elements.append(Spacer(1, 12))
                 
                 # Add orders statistics
