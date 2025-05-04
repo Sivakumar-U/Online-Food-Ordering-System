@@ -1407,7 +1407,7 @@ class OrdersFrame(ctk.CTkScrollableFrame):
         map_frame.pack(fill="x", padx=15, pady=(5, 15))
         
         # Try to load a map image
-        map_path = os.path.join('static', 'images', 'map_placeholder.png')
+        map_path = os.path.join('static', 'images', 'map.jpg')
         
         if os.path.exists(map_path):
             try:
